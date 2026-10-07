@@ -1,0 +1,152 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "tinytick",
+  "title": "tinytick",
+  "description": "Manage TickTick tasks from the launcher over the TickTick web API. No desktop app needed.",
+  "icon": "icon.png",
+  "author": "mimukit",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "platforms": ["macOS"],
+  "commands": [
+    {
+      "name": "today",
+      "title": "Today",
+      "subtitle": "TickTick",
+      "description": "Today's TickTick tasks, with keyboard actions for date, priority and completion.",
+      "mode": "view"
+    },
+    {
+      "name": "quick-add",
+      "title": "Quick Add Task",
+      "subtitle": "TickTick",
+      "description": "Add a TickTick task in natural language with a live preview.",
+      "mode": "view"
+    },
+    {
+      "name": "add-task",
+      "title": "Add Task",
+      "subtitle": "TickTick",
+      "description": "Add a TickTick task in one line from the root search.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "text",
+          "type": "text",
+          "placeholder": "call bank tomorrow 3pm !high",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "sync",
+      "title": "Sync",
+      "subtitle": "TickTick",
+      "description": "Refresh the local TickTick cache from the server.",
+      "mode": "no-view"
+    },
+    {
+      "name": "lists",
+      "title": "Lists",
+      "subtitle": "TickTick",
+      "description": "Browse TickTick lists and open one.",
+      "mode": "view"
+    },
+    {
+      "name": "search",
+      "title": "Search Tasks",
+      "subtitle": "TickTick",
+      "description": "Search open TickTick tasks.",
+      "mode": "view"
+    },
+    {
+      "name": "completed",
+      "title": "Completed Tasks",
+      "subtitle": "TickTick",
+      "description": "TickTick tasks completed in a date range.",
+      "mode": "view"
+    },
+    {
+      "name": "account",
+      "title": "Account",
+      "subtitle": "TickTick",
+      "description": "Sign in to TickTick, sign out, and see the sync state.",
+      "mode": "view"
+    },
+    {
+      "name": "menu-bar",
+      "title": "Today Count",
+      "subtitle": "TickTick",
+      "description": "Overdue and today task count in the menu bar, read from the local cache.",
+      "mode": "menu-bar"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "refreshAge",
+      "title": "Refresh on open",
+      "description": "Refresh in the background when the cache is older than this.",
+      "type": "dropdown",
+      "required": false,
+      "default": "10",
+      "data": [
+        { "title": "After 5 minutes", "value": "5" },
+        { "title": "After 10 minutes", "value": "10" },
+        { "title": "After 30 minutes", "value": "30" },
+        { "title": "After 60 minutes", "value": "60" },
+        { "title": "Never", "value": "never" }
+      ]
+    },
+    {
+      "name": "prefill",
+      "title": "Quick Add pre-fill",
+      "description": "Text to put in Quick Add when it opens.",
+      "type": "dropdown",
+      "required": false,
+      "default": "none",
+      "data": [
+        { "title": "Nothing", "value": "none" },
+        { "title": "Clipboard", "value": "clipboard" },
+        { "title": "Selected text", "value": "selection" }
+      ]
+    },
+    {
+      "name": "clientId",
+      "title": "OAuth client ID",
+      "description": "Client ID of your own TickTick developer app, for browser sign-in. Leave empty to use an API token.",
+      "type": "textfield",
+      "required": false
+    },
+    {
+      "name": "oauthRedirect",
+      "title": "OAuth redirect",
+      "description": "The redirect URI registered in your TickTick developer app.",
+      "type": "dropdown",
+      "required": false,
+      "default": "web",
+      "data": [
+        { "title": "https://raycast.com/redirect?packageName=Extension", "value": "web" },
+        { "title": "tinycast://oauth", "value": "tinycast" },
+        { "title": "raycast://oauth?package_name=Extension", "value": "app" }
+      ]
+    },
+    {
+      "name": "safeUpdates",
+      "title": "Safe edits",
+      "label": "Fetch a task before each edit",
+      "description": "Turn on if TickTick drops fields on a partial update.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "enableV2",
+      "title": "Unofficial v2 API",
+      "label": "Use the TickTick web API for extras",
+      "description": "One-call sync, Won't Do, pin and subtask links. Needs a session cookie from the Account command. Unofficial and can break.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    }
+  ]
+}

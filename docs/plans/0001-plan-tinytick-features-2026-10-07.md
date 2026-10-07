@@ -12,7 +12,7 @@ tinytick talks to the TickTick web API directly. It needs no TickTick desktop ap
 - Open Today, complete tasks, and change date and priority from the keyboard.
 - Open a task and manage its checklist items.
 
-The research for this plan is in [2026-10-07-research-api-host-prior-art.md](https://github.com/mimukit/ideas) (kept in the ideas repo).
+The research for this plan, `2026-10-07-research-api-host-prior-art.md`, is kept in the owner's ideas repo.
 
 ## Design decisions (settled)
 
@@ -158,7 +158,7 @@ On the task screen, `⌘⌥↑` and `⌘⌥↓` reorder a checklist item. If Tin
 | Search | view | Phase 5. |
 | Account | view | Sign in, sign out, v2 cookie, cache age. |
 
-### Phase 0: repo and build
+### Phase 0: repo and build (built 2026-10-07)
 
 - Create `mimukit/tinytick` (public, MIT) with pnpm, TypeScript, esbuild, vitest, and `@raycast/api` as a dev dependency.
 - Write `scripts/build.mjs`: bundle each command to CommonJS with `react` and `@raycast/api` external, and write `dist/package.json`.
@@ -167,7 +167,7 @@ On the task screen, `⌘⌥↑` and `⌘⌥↓` reorder a checklist item. If Tin
 
 Done when: `pnpm build` writes `dist/package.json` and `dist/today.js`, the folder installs in Tinycast with "Add from folder", and after a change, `pnpm build:install` shows the change in Tinycast without a reinstall.
 
-### Phase 1: client, auth, sync
+### Phase 1: client, auth, sync (built 2026-10-07)
 
 - Build the Open API client, the error class, and the date helpers.
 - Build the Keychain wrappers over `PKCEClient.setTokens` and `getTokens`. Check that two `providerId` values give two separate Keychain entries. If they do not, store all secrets in one token object.
@@ -179,7 +179,7 @@ Done when: `pnpm build` writes `dist/package.json` and `dist/today.js`, the fold
 
 Done when: Sync returns a HUD such as "Synced 14 lists, 87 tasks". The Account screen shows the sync time and the login type. After a Tinycast restart, the login remains, and `extension-data/tinytick.json` contains no token, cookie or secret.
 
-### Phase 2: Quick Add
+### Phase 2: Quick Add (built 2026-10-07)
 
 - Write the parser in `src/parse/` with a unit test per grammar row above. Pin the reference date in tests.
 - Build the Quick Add view: the preview row, list and tag autocomplete rows, Enter to create, `⌘↩` to create and keep the window open, `⌘⇧D` to keep date words.
@@ -188,7 +188,7 @@ Done when: Sync returns a HUD such as "Synced 14 lists, 87 tasks". The Account s
 
 Done when: `pnpm test` passes for every grammar row. `call bank tomorrow 3pm !high #admin ~Personal` creates a task in TickTick web with that list, tag, priority and a 15:00 due time. `"plan the march" fri` creates the title `plan the march`, due Friday.
 
-### Phase 3: Today and row actions
+### Phase 3: Today and row actions (built 2026-10-07)
 
 - Build the Today list from the cache: Overdue and Today sections, range tasks that cover today, and the group and sort settings kept in `LocalStorage`.
 - Add the view dropdown, the details panel toggle, and show completed (fetched on toggle).
@@ -199,7 +199,7 @@ Done when: `pnpm test` passes for every grammar row. `call bank tomorrow 3pm !hi
 
 Done when: from Today I complete a task with `↵`, set priority with `⌃3`, and move a date with `⌘2`, then press `⌘Z` three times, and TickTick web shows all three changes reverted after a reload. A completed repeating task shows its next occurrence without a manual sync.
 
-### Phase 4: task screen and checklist
+### Phase 4: task screen and checklist (built 2026-10-07)
 
 - Build the task screen as a pushed `List`: a header item with the details, then one row per checklist item, then real subtasks as read-only rows.
 - Add checklist actions: `↵` check or uncheck, the search bar as an "add item" input, rename, delete, reorder (`⌘⌥↑/↓`, fallback `⌘⇧↑/↓`), and convert to a task.
@@ -207,7 +207,7 @@ Done when: from Today I complete a task with `↵`, set priority with `⌃3`, an
 
 Done when: I add three checklist items, check two, and reorder one from the task screen, and TickTick web shows the same items, state and order.
 
-### Phase 5: lists, search, completed
+### Phase 5: lists, search, completed (built 2026-10-07)
 
 - Build the Lists command with project groups as sections. Opening a list reuses the Today list component.
 - Build Search over the cache, with a list filter in the dropdown and a "search on server" action that calls `POST /task/search`.
@@ -215,7 +215,7 @@ Done when: I add three checklist items, check two, and reorder one from the task
 
 Done when: a search for a word in a task note finds the task, and opening any list shows the same row actions as Today.
 
-### Phase 6: v2 extras (opt-in)
+### Phase 6: v2 extras (opt-in) (built 2026-10-07)
 
 - Add the v2 client with the pasted cookie from the Keychain, the `X-Device` header, and a clear "v2 session expired" toast.
 - Use `GET /batch/check/0` for a one-call sync. Try `GET /batch/check/{checkPoint}` as a delta sync.

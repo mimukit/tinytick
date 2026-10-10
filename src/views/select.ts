@@ -119,7 +119,7 @@ export interface TaskSection {
 const PRIORITY_SECTION: Record<number, string> = { 5: "High", 3: "Medium", 1: "Low", 0: "No Priority" };
 
 function timeSection(task: Task, now: Date): { key: string; title: string } {
-  if (isOverdue(task, now)) return { key: "0-overdue", title: "Overdue" };
+  if (isOverdue(task, now)) return { key: "z-overdue", title: "Overdue" };
   const today = dayKey(now);
   const { start, due } = days(task);
   if (!due) return { key: "9-nodate", title: "No Date" };

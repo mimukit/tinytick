@@ -64,8 +64,8 @@ describe("groupTasks", () => {
   const today = task({ title: "t", dueDate: day(0), isAllDay: true, projectId: "p2" });
   const snap = snapshotOf([overdue, today]);
 
-  it("groups by time with Overdue first", () => {
-    expect(groupTasks([today, overdue], "time", snap, NOW).map((s) => s.title)).toEqual(["Overdue", "Today"]);
+  it("groups by time with Overdue last", () => {
+    expect(groupTasks([today, overdue], "time", snap, NOW).map((s) => s.title)).toEqual(["Today", "Overdue"]);
   });
 
   it("groups by list", () => {

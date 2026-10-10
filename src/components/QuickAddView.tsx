@@ -27,21 +27,23 @@ function trailingToken(text: string): { kind: "list" | "tag"; query: string; sta
 export interface QuickAddProps {
   defaultProjectId?: string;
   defaultDue?: Date;
+  /** Text from the command argument. It replaces the pre-fill preference. */
+  initialText?: string;
   /** Pop back to the calling screen after a create, in place of closing the window. */
   popOnCreate?: boolean;
 }
 
-export function QuickAddView({ defaultProjectId, defaultDue, popOnCreate }: QuickAddProps) {
+export function QuickAddView({ defaultProjectId, defaultDue, initialText, popOnCreate }: QuickAddProps) {
   const { snapshot } = useLive();
   const { pop } = useNavigation();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText ?? "");
   const [ignoreDates, setIgnoreDates] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     refreshIfStale();
     const mode = prefs().prefill;
-    if (mode === "none" || popOnCreate) return;
+    if (mode === "none" || popOnCreate || initialText) return;
     const read = mode === "clipboard" ? Clipboard.readText() : getSelectedText();
     read.then((value) => value && setText((t) => t || value.trim().split("\n")[0])).catch(() => undefined);
   }, []);
@@ -122,7 +124,7 @@ export function QuickAddView({ defaultProjectId, defaultDue, popOnCreate }: Quic
       onSearchTextChange={setText}
       filtering={false}
       isLoading={busy}
-      navigationTitle="Quick Add"
+      navigationTitle="Add Task"
       searchBarPlaceholder="call bank tomorrow 3pm !high #admin ~Personal"
     >
       {!text.trim() ? (

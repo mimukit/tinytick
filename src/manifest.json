@@ -10,75 +10,26 @@
   "platforms": ["macOS"],
   "commands": [
     {
-      "name": "today",
-      "title": "Today",
+      "name": "tasks",
+      "title": "Tasks",
       "subtitle": "TickTick",
-      "description": "Today's TickTick tasks, with keyboard actions for date, priority and completion.",
-      "mode": "view"
-    },
-    {
-      "name": "quick-add",
-      "title": "Quick Add Task",
-      "subtitle": "TickTick",
-      "description": "Add a TickTick task in natural language with a live preview.",
+      "description": "Today, upcoming, lists and completed TickTick tasks, with search and keyboard actions.",
       "mode": "view"
     },
     {
       "name": "add-task",
       "title": "Add Task",
       "subtitle": "TickTick",
-      "description": "Add a TickTick task in one line from the root search.",
-      "mode": "no-view",
+      "description": "Add a TickTick task in natural language with a live preview.",
+      "mode": "view",
       "arguments": [
         {
           "name": "text",
           "type": "text",
           "placeholder": "call bank tomorrow 3pm !high",
-          "required": true
+          "required": false
         }
       ]
-    },
-    {
-      "name": "sync",
-      "title": "Sync",
-      "subtitle": "TickTick",
-      "description": "Refresh the local TickTick cache from the server.",
-      "mode": "no-view"
-    },
-    {
-      "name": "lists",
-      "title": "Lists",
-      "subtitle": "TickTick",
-      "description": "Browse TickTick lists and open one.",
-      "mode": "view"
-    },
-    {
-      "name": "search",
-      "title": "Search Tasks",
-      "subtitle": "TickTick",
-      "description": "Search open TickTick tasks.",
-      "mode": "view"
-    },
-    {
-      "name": "completed",
-      "title": "Completed Tasks",
-      "subtitle": "TickTick",
-      "description": "TickTick tasks completed in a date range.",
-      "mode": "view"
-    },
-    {
-      "name": "account",
-      "title": "Account",
-      "subtitle": "TickTick",
-      "description": "Sign in to TickTick, sign out, and see the sync state.",
-      "mode": "view"
-    },
-    {
-      "name": "menu-bar",
-      "title": "Today Count",
-      "subtitle": "TickTick",
-      "description": "Overdue and today task count in the menu bar, read from the local cache.",
-      "mode": "menu-bar"
     }
   ],
   "preferences": [
@@ -99,8 +50,8 @@
     },
     {
       "name": "prefill",
-      "title": "Quick Add pre-fill",
-      "description": "Text to put in Quick Add when it opens.",
+      "title": "Add Task pre-fill",
+      "description": "Text to put in Add Task when it opens with no argument.",
       "type": "dropdown",
       "required": false,
       "default": "none",
@@ -123,7 +74,7 @@
       "name": "enableV2",
       "title": "Unofficial v2 API",
       "label": "Use the TickTick web API for extras",
-      "description": "One-call sync, Won't Do, pin and subtask links. Needs a session cookie from the Account command. Unofficial and can break.",
+      "description": "One-call sync, Won't Do, pin and subtask links. Needs a session cookie from the Account screen (⌘⇧A in Tasks). Unofficial and can break.",
       "type": "checkbox",
       "required": false,
       "default": false

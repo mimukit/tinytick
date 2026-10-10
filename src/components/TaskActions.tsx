@@ -7,11 +7,14 @@ import { useLive } from "../store/live";
 import { prefs } from "../store/service";
 import { datePatch, toggleTagPatch } from "../views/patches";
 import { GROUP_TITLES, SORT_TITLES, type GroupBy, type SortBy } from "../views/select";
+import type { Auth } from "../auth/secrets";
+import { AccountView } from "./AccountView";
 import { DateForm } from "./DateForm";
 import { PRIORITY_COLOR } from "./format";
 import { Picker } from "./Picker";
 import { EditTaskForm } from "./EditTaskForm";
 import { QuickAddView } from "./QuickAddView";
+import { ServerResults } from "./ServerResults";
 import { AddChecklistItemForm, TaskScreen } from "./TaskScreen";
 
 export interface ListControls {
@@ -23,8 +26,12 @@ export interface ListControls {
   toggleCompleted: () => void;
   showDetail: boolean;
   toggleDetail: () => void;
-  /** Defaults for Quick Add opened from this view. */
+  /** Defaults for Add Task opened from this view. */
   quickAddDefaults?: { projectId?: string; dueToday?: boolean };
+  /** The search bar text, for the server search. */
+  searchText?: string;
+  /** Runs after the Account screen loads the sign-in state, so a sign-out shows the sign-in screen. */
+  onAuthChange?: (auth: Auth) => void;
 }
 
 // One-key shortcuts on the list rows, beside the ⌘D and ⌘P pickers.
@@ -90,7 +97,28 @@ export function ViewActions({ controls }: { controls: ListControls }) {
         onAction={controls.toggleDetail}
       />
       <Action title="Sync Now" icon={Icon.ArrowClockwise} shortcut={{ modifiers: ["cmd"], key: "r" }} onAction={() => void refresh({ full: true })} />
+      <ServerSearchAction text={controls.searchText} />
+      <Action.Push
+        title="Account"
+        icon={Icon.Person}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
+        target={<AccountView onChange={controls.onAuthChange} />}
+      />
     </ActionPanel.Section>
+  );
+}
+
+function ServerSearchAction({ text }: { text?: string }) {
+  const { push } = useNavigation();
+  const keywords = text?.trim();
+  if (!keywords) return null;
+  return (
+    <Action
+      title="Search on Server"
+      icon={Icon.Globe}
+      shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+      onAction={() => push(<ServerResults keywords={keywords} />)}
+    />
   );
 }
 
@@ -98,7 +126,7 @@ export function QuickAddAction({ controls }: { controls?: ListControls }) {
   const { push } = useNavigation();
   return (
     <Action
-      title="Quick Add Task"
+      title="Add Task"
       icon={Icon.Plus}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
       onAction={() =>

@@ -3,7 +3,7 @@ import { addDays, dayKey, formatDueLabel, parseTickTickTime, startOfDay, taskDay
 import type { Task } from "../api/types";
 import { isOpen, projectName, type Snapshot } from "../store/snapshot";
 
-export type ViewId = "today" | "tomorrow" | "next7" | "inbox" | "all" | `project:${string}`;
+export type ViewId = "today" | "tomorrow" | "next7" | "inbox" | "all" | `project:${string}` | `completed:${string}`;
 export type GroupBy = "none" | "time" | "list" | "priority" | "tag";
 export type SortBy = "date" | "priority" | "title" | "list" | "created";
 
@@ -13,6 +13,14 @@ export const VIEW_TITLES: Record<string, string> = {
   next7: "Next 7 Days",
   inbox: "Inbox",
   all: "All",
+};
+
+/** Completed views, by how many days before today they reach back. */
+export const COMPLETED_RANGES: Record<string, { title: string; days: number }> = {
+  today: { title: "Completed Today", days: 0 },
+  yesterday: { title: "Completed Since Yesterday", days: 1 },
+  week: { title: "Completed Last 7 Days", days: 6 },
+  month: { title: "Completed Last 30 Days", days: 29 },
 };
 
 export const GROUP_TITLES: Record<GroupBy, string> = {
@@ -76,6 +84,8 @@ export function selectView(snapshot: Snapshot, view: ViewId, now = new Date()): 
     case "all":
       return open;
     default: {
+      // Completed views come from the server, not from the cache.
+      if (view.startsWith("completed:")) return [];
       const projectId = view.slice("project:".length);
       return open.filter((t) => t.projectId === projectId);
     }
@@ -177,8 +187,3 @@ export function checklistProgress(task: Task): string | undefined {
 }
 
 /** Counts for the menu bar: overdue and today. */
-export function todayCounts(snapshot: Snapshot, now = new Date()): { overdue: number; today: number } {
-  const tasks = selectView(snapshot, "today", now);
-  const overdue = tasks.filter((t) => isOverdue(t, now)).length;
-  return { overdue, today: tasks.length - overdue };
-}

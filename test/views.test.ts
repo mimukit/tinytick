@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checklistProgress, groupTasks, isOverdue, selectView, sortTasks, todayCounts } from "../src/views/select";
+import { checklistProgress, groupTasks, isOverdue, selectView, sortTasks } from "../src/views/select";
 import { NOW, day, snapshotOf, task } from "./fixtures";
 
 describe("selectView today", () => {
@@ -21,8 +21,8 @@ describe("selectView today", () => {
     expect(isOverdue(overdue, NOW)).toBe(true);
   });
 
-  it("counts overdue and today for the menu bar", () => {
-    expect(todayCounts(snap, NOW)).toEqual({ overdue: 1, today: 2 });
+  it("leaves completed views to the server", () => {
+    expect(selectView(snap, "completed:week", NOW)).toEqual([]);
   });
 
   it("selects tomorrow, next 7 days, inbox and a list", () => {

@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Clipboard, Color, Icon, List, Toast, getSelectedText, showHUD, showToast, useNavigation } from "@raycast/api";
+import { Action, ActionPanel, Clipboard, Color, Icon, List, Toast, closeMainWindow, getSelectedText, popToRoot, showHUD, showToast, useNavigation } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { draftToTask, parseQuickAdd, resolveList, type ParsedMatch } from "../parse/quickadd";
 import { create, refreshIfStale } from "../store/actions";
@@ -66,14 +66,17 @@ export function QuickAddView({ defaultProjectId, defaultDue, initialText, popOnC
     setBusy(false);
     if (!task) return;
     setIgnoreDates(false);
+    setText("");
     if (keepOpen) {
-      setText("");
       await showToast({ style: Toast.Style.Success, title: "Added", message: task.title });
     } else if (popOnCreate) {
       pop();
       await showToast({ style: Toast.Style.Success, title: "Added", message: task.title });
     } else {
+      // Tinycast's showHUD does not close the window as Raycast's does, so close it and reset the launcher here.
       await showHUD(`Added: ${task.title}`);
+      await closeMainWindow({ clearRootSearch: true });
+      await popToRoot();
     }
   }
 

@@ -27,6 +27,13 @@ export interface ListControls {
   quickAddDefaults?: { projectId?: string; dueToday?: boolean };
 }
 
+// One-key shortcuts on the list rows, beside the ⌘D and ⌘P pickers.
+const QUICK_PRIORITIES: { value: Priority; title: string; key: "1" | "2" | "3" }[] = [
+  { value: 5, title: "High", key: "1" },
+  { value: 3, title: "Medium", key: "2" },
+  { value: 1, title: "Low", key: "3" },
+];
+
 const PRIORITIES: { value: Priority; title: string }[] = [
   { value: 5, title: "High" },
   { value: 3, title: "Medium" },
@@ -153,6 +160,30 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
           onAction={() => push(<TaskScreen taskId={task.id} />)}
         />
         <UndoAction />
+      </ActionPanel.Section>
+      <ActionPanel.Section title="Quick Set">
+        <Action title="Due Today" icon={Icon.Calendar} shortcut={{ modifiers: ["cmd"], key: "1" }} onAction={() => setDate(today, "Set date")} />
+        <Action
+          title="Due Tomorrow"
+          icon={Icon.Calendar}
+          shortcut={{ modifiers: ["cmd"], key: "2" }}
+          onAction={() => setDate(addDays(today, 1), "Set date")}
+        />
+        <Action
+          title="Due Next Week"
+          icon={Icon.Calendar}
+          shortcut={{ modifiers: ["cmd"], key: "3" }}
+          onAction={() => setDate(nextMonday(today), "Set date")}
+        />
+        {QUICK_PRIORITIES.map((p) => (
+          <Action
+            key={p.value}
+            title={`Priority ${p.title}`}
+            icon={{ source: Icon.Flag, tintColor: PRIORITY_COLOR[p.value] }}
+            shortcut={{ modifiers: ["ctrl"], key: p.key }}
+            onAction={() => void updateFields(task, { priority: p.value }, "Set priority")}
+          />
+        ))}
       </ActionPanel.Section>
       <ActionPanel.Section title="Task">
         <Action.Push

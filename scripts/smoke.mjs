@@ -192,8 +192,13 @@ failures += await run("today", { interact: async (ctx) => {
   await choose(ctx, "time");
   assert.equal(sectionTitles().at(-1), "Overdue", `Overdue is the last time section: ${sectionTitles()}`);
   const menu = findAll(ctx.tree, (n) => n.type === "List.Item" && n.props.title === "Pay rent")[0];
-  const titles = findAll(menu.props.actions, (n) => n.type === "Action").map((n) => n.props.title);
-  assert.ok(titles.length <= 20, `action panel stays short: ${titles.length}`);
+  const actions = findAll(menu.props.actions, (n) => n.type === "Action");
+  const titles = actions.map((n) => n.props.title);
+  const keys = actions.map((n) => n.props.shortcut && `${n.props.shortcut.modifiers.join("+")}+${n.props.shortcut.key}`);
+  for (const k of ["cmd+1", "cmd+2", "cmd+3", "ctrl+1", "ctrl+2", "ctrl+3"]) assert.ok(keys.includes(k), `row has the ${k} shortcut`);
+  assert.ok(titles.length <= 24, `action panel stays short: ${titles.length}`);
+  await pressOn(ctx, "Pay rent", "Priority Low");
+  assert.ok(sent(ctx.calls, /"priority":1,/), "ctrl+3 sets low priority");
 }});
 failures += await run("today", { signedIn: false, interact: async (ctx) => {
   // Rows, not an EmptyView: Tinycast shows the ↵ and ⌘K pill only when a row is selected.

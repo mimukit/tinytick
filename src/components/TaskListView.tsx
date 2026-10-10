@@ -9,7 +9,7 @@ import { useLive } from "../store/live";
 import { openApi } from "../store/service";
 import { projectName } from "../store/snapshot";
 import { VIEW_TITLES, childTasks, groupTasks, selectView, sortTasks, type GroupBy, type SortBy, type ViewId } from "../views/select";
-import { AccountView } from "./AccountView";
+import { AccountView, TokenForm } from "./AccountView";
 import { taskAccessories, taskIcon, taskMarkdown } from "./format";
 import { CompletedTaskActions, QuickAddAction, TaskActions, UndoAction, ViewActions, type ListControls } from "./TaskActions";
 
@@ -100,24 +100,54 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
   const viewTitle = title ?? VIEW_TITLES[view] ?? (projectId ? projectName(snapshot, projectId) : "Tasks");
   const syncedAt = snapshot.syncedAt ? new Date(snapshot.syncedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "never";
 
+  // Rows, not an EmptyView: Tinycast shows the ↵ and ⌘K pill only when a row is selected.
   if (signedIn === false) {
+    const onSignIn = () => setSignedIn(true);
+    const tokenAction = <Action.Push title="Enter API Token" icon={Icon.Key} target={<TokenForm onDone={onSignIn} />} />;
+    const accountAction = (
+      <Action.Push title="Open Account" icon={Icon.Person} target={<AccountView onChange={(a) => setSignedIn(!!a.token)} />} />
+    );
     return (
-      <List>
-        <List.EmptyView
-          icon={Icon.Person}
-          title="Sign in to TickTick"
-          description="Open Account to sign in with an API token or the browser."
-          actions={
-            <ActionPanel>
-              <Action.Push title="Open Account" icon={Icon.Person} target={<AccountView />} />
-            </ActionPanel>
-          }
-        />
+      <List navigationTitle="Sign in to TickTick" searchBarPlaceholder="Sign in to TickTick to see your tasks">
+        <List.Section title="Sign in to TickTick">
+          <List.Item
+            title="Sign in with an API token"
+            subtitle="TickTick Settings › Account › API Token"
+            icon={Icon.Key}
+            actions={
+              <ActionPanel>
+                {tokenAction}
+                {accountAction}
+              </ActionPanel>
+            }
+          />
+          <List.Item
+            title="Open Account"
+            subtitle="Sign-in state, v2 cookie and sign-out"
+            icon={Icon.Person}
+            actions={
+              <ActionPanel>
+                {accountAction}
+                {tokenAction}
+              </ActionPanel>
+            }
+          />
+        </List.Section>
       </List>
     );
   }
 
+  // Tinycast ignores EmptyView actions and shows the List's own, so each empty state sets both.
+
   const total = sections.reduce((n, s) => n + s.tasks.length, 0);
+  const isEmpty = total === 0 && !(showCompleted && completed?.length);
+  const emptyActions = (
+    <ActionPanel>
+      <QuickAddAction controls={controls} />
+      <UndoAction />
+      <ViewActions controls={controls} />
+    </ActionPanel>
+  );
 
   return (
     <List
@@ -125,6 +155,7 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
       isShowingDetail={showDetail}
       navigationTitle={`${viewTitle} · synced ${syncedAt}`}
       searchBarPlaceholder={`Filter ${viewTitle}`}
+      actions={isEmpty ? emptyActions : undefined}
       searchBarAccessory={
         fixedView ? undefined : (
           <List.Dropdown tooltip="View" storeValue onChange={(v) => setView(v as ViewId)} defaultValue="today">
@@ -135,18 +166,12 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
         )
       }
     >
-      {total === 0 && !(showCompleted && completed?.length) && (
+      {isEmpty && (
         <List.EmptyView
           icon={Icon.CheckCircle}
           title={snapshot.syncedAt ? `Nothing in ${viewTitle}` : "No data yet"}
           description={snapshot.syncedAt ? "Press ⌘N to add a task." : "Press ⌘R to sync."}
-          actions={
-            <ActionPanel>
-              <QuickAddAction controls={controls} />
-              <UndoAction />
-              <ViewActions controls={controls} />
-            </ActionPanel>
-          }
+          actions={emptyActions}
         />
       )}
       {sections.map((section) => (

@@ -162,7 +162,13 @@ failures += await run("today", { interact: async (ctx) => {
   assert.ok(sent(ctx.calls, /"title":"Proofread","status":0,"sortOrder":2/), "add item");
 }});
 failures += await run("today", { signedIn: false, interact: async (ctx) => {
-  assert.ok(findAll(ctx.tree, (n) => n.type === "List.EmptyView" && n.props.title === "Sign in to TickTick").length, "sign-in prompt");
+  // Rows, not an EmptyView: Tinycast shows the ↵ and ⌘K pill only when a row is selected.
+  const rows = findAll(ctx.tree, (n) => n.type === "List.Item");
+  assert.deepEqual(rows.map((r) => r.props.title), ["Sign in with an API token", "Open Account"], "sign-in rows");
+  const first = (row) => findAll(row.props.actions, (n) => n.type === "Action")[0]?.props.title;
+  assert.deepEqual(rows.map(first), ["Enter API Token", "Open Account"], "each row's primary action");
+  await press(ctx, "Enter API Token");
+  assert.ok(findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "Form.PasswordField" && n.props.id === "token").length, "token form opens");
 }});
 failures += await run("quick-add", { interact: async (ctx) => {
   const list = findAll(ctx.tree, (n) => n.type === "List" && n.props?.onSearchTextChange?.$fn)[0];

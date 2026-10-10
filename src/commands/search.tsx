@@ -41,6 +41,7 @@ export default function Command() {
 
   return (
     <List
+      actions={<ActionPanel>{serverSearch}</ActionPanel>}
       isLoading={loading}
       onSearchTextChange={setText}
       searchBarPlaceholder="Search open tasks"

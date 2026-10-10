@@ -2,10 +2,11 @@
 // dist/assets/, and one CommonJS bundle per command. With --install, it also
 // copies dist/ into Tinycast's extensions folder.
 import { build } from "esbuild";
+import { createHash } from "node:crypto";
 import { builtinModules } from "node:module";
-import { cpSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const dist = join(root, "dist");
@@ -37,8 +38,35 @@ await build({
   logLevel: "warning",
 });
 
-writeFileSync(join(dist, "package.json"), JSON.stringify({ ...manifest, version: pkg.version }, null, 2) + "\n");
-cpSync(join(root, "assets"), join(dist, "assets"), { recursive: true });
+cpSync(join(root, "assets"), join(dist, "assets"), {
+  recursive: true,
+  filter: (src) => !src.endsWith(".DS_Store"),
+});
+
+// Tinycast caches icon bitmaps by file path for the life of the process, so a
+// new icon under the same name keeps showing the old one. Name each icon file
+// after its content to give a changed icon a new path.
+const hashedIcons = new Map();
+function hashedIcon(name) {
+  if (!name) return name;
+  if (!hashedIcons.has(name)) {
+    const bytes = readFileSync(join(root, "assets", name));
+    const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 8);
+    const ext = extname(name);
+    const hashed = `${name.slice(0, -ext.length)}-${hash}${ext}`;
+    renameSync(join(dist, "assets", name), join(dist, "assets", hashed));
+    hashedIcons.set(name, hashed);
+  }
+  return hashedIcons.get(name);
+}
+
+const distManifest = {
+  ...manifest,
+  version: pkg.version,
+  icon: hashedIcon(manifest.icon),
+  commands: manifest.commands.map((c) => (c.icon ? { ...c, icon: hashedIcon(c.icon) } : c)),
+};
+writeFileSync(join(dist, "package.json"), JSON.stringify(distManifest, null, 2) + "\n");
 
 let failed = false;
 for (const c of manifest.commands) {

@@ -1,115 +1,78 @@
-// Every secret goes to the Keychain through OAuth.PKCEClient.setTokens. Tinycast
-// keeps preferences, LocalStorage and Cache as plaintext JSON, so no secret goes there.
+// Every secret goes to the macOS login Keychain as a generic password, through
+// /usr/bin/security. Tinycast keeps preferences, LocalStorage and Cache as
+// plaintext JSON, so no secret goes there.
 //
-// One token set holds everything, which avoids relying on two provider ids
-// getting two Keychain entries:
-//   accessToken  the Open API token (personal API token or OAuth access token)
-//   idToken      the v2 session cookie, when one is set
-//   scope        how the user signed in: "token" or "oauth"
-import { OAuth } from "@raycast/api";
-import { base64 } from "./base64";
+// Writes send the secret on stdin to `security -i`, so it never shows in the
+// process list. Reads use `find-generic-password -w`, which prints only the secret.
+import { spawnSync } from "node:child_process";
 
-export type LoginKind = "token" | "oauth";
+export const KEYCHAIN_SERVICE = "tinytick";
+export const TOKEN_ACCOUNT = "api-token";
+export const COOKIE_ACCOUNT = "v2-cookie";
+const SECURITY = "/usr/bin/security";
+/** The exit code of `security` when no item matches. */
+const NOT_FOUND = 44;
 
 export interface Auth {
   token?: string;
-  kind?: LoginKind;
   v2Cookie?: string;
-  expired: boolean;
-  updatedAt?: Date;
 }
 
-const PROVIDER = {
-  providerName: "TickTick",
-  providerId: "ticktick",
-  description: "Sign in to TickTick to manage your tasks.",
-};
+function security(args: string[], input?: string): { status: number; stdout: string; stderr: string } {
+  const result = spawnSync(SECURITY, args, { input, encoding: "utf8", timeout: 10_000 });
+  if (result.error) throw new Error(`Could not run ${SECURITY}: ${result.error.message}`);
+  return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+}
 
-export const OAUTH_AUTHORIZE_URL = "https://ticktick.com/oauth/authorize";
-export const OAUTH_TOKEN_URL = "https://ticktick.com/oauth/token";
-export const OAUTH_SCOPE = "tasks:read tasks:write";
+/** Quotes a value for one line of `security -i`, which splits on spaces and reads \" and \\. */
+export function quoteArg(value: string): string {
+  return `"${value.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
+}
 
-export type RedirectChoice = "web" | "tinycast" | "app";
+/** The `security -i` line that adds or replaces one secret. */
+export function addCommand(account: string, secret: string): string {
+  return `add-generic-password -U -s ${quoteArg(KEYCHAIN_SERVICE)} -a ${quoteArg(account)} -w ${quoteArg(secret)}\n`;
+}
 
-function client(redirect: RedirectChoice = "web"): OAuth.PKCEClient {
-  const redirectMethod = redirect === "web" ? OAuth.RedirectMethod.Web : OAuth.RedirectMethod.App;
-  return new OAuth.PKCEClient({ redirectMethod, ...PROVIDER });
+function read(account: string): string | undefined {
+  const r = security(["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account, "-w"]);
+  if (r.status === NOT_FOUND) return undefined;
+  if (r.status !== 0) throw new Error(`Could not read the Keychain (${r.status}): ${r.stderr.trim()}`);
+  return r.stdout.replace(/\n$/, "") || undefined;
+}
+
+function write(account: string, secret: string): void {
+  // A control character would end the `security -i` line, and `-w` prints such a secret as hex.
+  if (/[\u0000-\u001f\u007f]/.test(secret)) throw new Error("The secret has a control character. Paste it again.");
+  const r = security(["-i"], addCommand(account, secret));
+  // `security -i` can exit 0 after a failed command, so read the item back.
+  if (r.status !== 0 || read(account) !== secret) {
+    throw new Error(`Could not save to the Keychain: ${r.stderr.trim() || "the stored value does not match"}`);
+  }
+}
+
+function remove(account: string): void {
+  const r = security(["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account]);
+  if (r.status !== 0 && r.status !== NOT_FOUND) throw new Error(`Could not delete from the Keychain (${r.status}): ${r.stderr.trim()}`);
 }
 
 export async function getAuth(): Promise<Auth> {
-  const set = await client().getTokens();
-  if (!set?.accessToken && !set?.idToken) return { expired: false };
-  const kind = set.scope === "oauth" ? "oauth" : "token";
-  return {
-    token: set.accessToken || undefined,
-    kind,
-    v2Cookie: set.idToken || undefined,
-    expired: kind === "oauth" && set.isExpired(),
-    updatedAt: set.updatedAt,
-  };
-}
-
-async function write(next: { token?: string; kind?: LoginKind; v2Cookie?: string; expiresIn?: number }): Promise<void> {
-  await client().setTokens({
-    accessToken: next.token ?? "",
-    idToken: next.v2Cookie,
-    scope: next.kind ?? "token",
-    expiresIn: next.expiresIn,
-  });
+  return { token: read(TOKEN_ACCOUNT), v2Cookie: read(COOKIE_ACCOUNT) };
 }
 
 export async function saveApiToken(token: string): Promise<void> {
-  const current = await getAuth();
-  await write({ token: token.trim(), kind: "token", v2Cookie: current.v2Cookie });
+  write(TOKEN_ACCOUNT, token.trim());
 }
 
+/** Saves the v2 session cookie, or removes it when the value is empty. */
 export async function saveV2Cookie(cookie: string | undefined): Promise<void> {
-  const current = await getAuth();
-  await write({ token: current.token, kind: current.kind, v2Cookie: cookie?.trim() || undefined });
+  const value = cookie?.trim();
+  if (value) write(COOKIE_ACCOUNT, value);
+  else remove(COOKIE_ACCOUNT);
 }
 
 /** Removes every stored secret. */
 export async function signOut(): Promise<void> {
-  await client().removeTokens();
-}
-
-/**
- * Browser sign-in with your own TickTick developer app. Tinycast hands the
- * authorization code back to the extension, and the extension exchanges it
- * with HTTP Basic. The client secret is used for this one call and never stored.
- */
-export async function oauthSignIn(clientId: string, clientSecret: string, redirect: RedirectChoice): Promise<void> {
-  const pkce = client(redirect);
-  const extraParameters: Record<string, string> = {};
-  if (redirect === "tinycast") extraParameters.redirect_uri = "tinycast://oauth";
-  const request = await pkce.authorizationRequest({
-    endpoint: OAUTH_AUTHORIZE_URL,
-    clientId,
-    scope: OAUTH_SCOPE,
-    extraParameters,
-  });
-  const redirectUri = extraParameters.redirect_uri ?? request.redirectURI;
-  const { authorizationCode } = await pkce.authorize(request);
-
-  const body = new URLSearchParams({
-    code: authorizationCode,
-    grant_type: "authorization_code",
-    scope: OAUTH_SCOPE,
-    redirect_uri: redirectUri,
-  });
-  const res = await fetch(OAUTH_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${base64(`${clientId}:${clientSecret}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body: body.toString(),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`TickTick refused the sign-in (${res.status}): ${text.slice(0, 200)}`);
-  const reply = JSON.parse(text) as { access_token?: string; expires_in?: number };
-  if (!reply.access_token) throw new Error("TickTick sent no access token.");
-  const current = await getAuth();
-  await write({ token: reply.access_token, kind: "oauth", v2Cookie: current.v2Cookie, expiresIn: reply.expires_in });
+  remove(TOKEN_ACCOUNT);
+  remove(COOKIE_ACCOUNT);
 }

@@ -10,8 +10,6 @@ import { EMPTY_SNAPSHOT, parseSnapshot, syncOpen, syncV2, type Snapshot } from "
 export interface Preferences {
   refreshAge: string;
   prefill: "none" | "clipboard" | "selection";
-  clientId?: string;
-  oauthRedirect: "web" | "tinycast" | "app";
   safeUpdates: boolean;
   enableV2: boolean;
 }
@@ -21,8 +19,6 @@ export function prefs(): Preferences {
   return {
     refreshAge: p.refreshAge ?? "10",
     prefill: p.prefill ?? "none",
-    clientId: p.clientId?.trim() || undefined,
-    oauthRedirect: p.oauthRedirect ?? "web",
     safeUpdates: !!p.safeUpdates,
     enableV2: !!p.enableV2,
   };
@@ -44,15 +40,15 @@ export function clearSnapshot(): void {
 }
 
 export class NotSignedInError extends Error {
-  constructor(expired = false) {
-    super(expired ? "Your TickTick sign-in expired. Sign in again from the Account command." : "Sign in to TickTick from the Account command.");
+  constructor() {
+    super("Sign in to TickTick from the Account command.");
     this.name = "NotSignedInError";
   }
 }
 
 export async function openApi(): Promise<OpenApi> {
   const auth = await getAuth();
-  if (!auth.token || auth.expired) throw new NotSignedInError(auth.expired);
+  if (!auth.token) throw new NotSignedInError();
   return new OpenApi(auth.token);
 }
 

@@ -45,7 +45,7 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
 
   useEffect(() => {
     getAuth().then((a) => {
-      const ok = !!a.token && !a.expired;
+      const ok = !!a.token;
       setSignedIn(ok);
       if (ok) refreshIfStale();
     });

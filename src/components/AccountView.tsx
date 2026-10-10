@@ -2,33 +2,33 @@ import { Action, ActionPanel, Alert, Color, Form, Icon, List, Toast, confirmAler
 import { useEffect, useState } from "react";
 import { OpenApi } from "../api/client";
 import { errorMessage } from "../api/errors";
-import { getAuth, oauthSignIn, saveApiToken, saveV2Cookie, signOut, type Auth, type RedirectChoice } from "../auth/secrets";
+import { getAuth, saveApiToken, saveV2Cookie, signOut, type Auth } from "../auth/secrets";
 import { refresh } from "../store/actions";
 import { commitSnapshot, useLive } from "../store/live";
 import { clearSnapshot, prefs } from "../store/service";
 import { EMPTY_SNAPSHOT } from "../store/snapshot";
 
-function useAuth(): [Auth | undefined, () => void] {
+function useAuth(onChange?: (auth: Auth) => void): [Auth | undefined, () => void] {
   const [auth, setAuth] = useState<Auth>();
-  const load = () => void getAuth().then(setAuth);
+  const load = () =>
+    void getAuth().then((a) => {
+      setAuth(a);
+      onChange?.(a);
+    }, async (error) => {
+      setAuth({});
+      await showToast({ style: Toast.Style.Failure, title: "Could not read the Keychain", message: errorMessage(error) });
+    });
   useEffect(load, []);
   return [auth, load];
 }
 
-export function AccountView() {
-  const [auth, reload] = useAuth();
+/** `onChange` runs after each sign-in state load, so the screen that pushed Account can follow it. */
+export function AccountView({ onChange }: { onChange?: (auth: Auth) => void } = {}) {
+  const [auth, reload] = useAuth(onChange);
   const { snapshot, loading } = useLive();
   const p = prefs();
-  const signedIn = !!auth?.token && !auth.expired;
-  const status = !auth
-    ? "Checking…"
-    : auth.expired
-      ? "Sign-in expired"
-      : signedIn
-        ? auth.kind === "oauth"
-          ? "Signed in with the browser"
-          : "Signed in with an API token"
-        : "Not signed in";
+  const signedIn = !!auth?.token;
+  const status = !auth ? "Checking…" : signedIn ? "Signed in with an API token" : "Not signed in";
   const synced = snapshot.syncedAt ? new Date(snapshot.syncedAt).toLocaleString() : "Never";
 
   return (
@@ -37,7 +37,6 @@ export function AccountView() {
         <List.Item
           title={status}
           icon={{ source: signedIn ? Icon.CheckCircle : Icon.XMarkCircle, tintColor: signedIn ? Color.Green : Color.Red }}
-          accessories={auth?.updatedAt ? [{ date: auth.updatedAt, tooltip: "Signed in at" }] : []}
         />
         <List.Item
           title="Last sync"
@@ -74,17 +73,6 @@ export function AccountView() {
         />
       </List.Section>
       <List.Section title="Sign In">
-        <List.Item
-          title="Sign in with the browser"
-          subtitle={p.clientId ? "Uses your TickTick developer app" : "Set the OAuth client ID in preferences first"}
-          icon={Icon.Globe}
-          actions={
-            <ActionPanel>
-              <Action.Push title="Sign in with Browser" icon={Icon.Globe} target={<OAuthForm onDone={reload} />} />
-              <Action title="Open Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-            </ActionPanel>
-          }
-        />
         <List.Item
           title="Sign in with an API token"
           subtitle="TickTick Settings › Account › API Token"
@@ -129,7 +117,7 @@ export function AccountView() {
   );
 }
 
-function TokenForm({ onDone }: { onDone: () => void }) {
+export function TokenForm({ onDone }: { onDone: () => void }) {
   const { pop } = useNavigation();
   const [busy, setBusy] = useState(false);
   return (
@@ -163,53 +151,6 @@ function TokenForm({ onDone }: { onDone: () => void }) {
     >
       <Form.Description text="Create a token in TickTick: Settings › Account › API Token. tinytick stores it in the macOS Keychain." />
       <Form.PasswordField id="token" title="API token" />
-    </Form>
-  );
-}
-
-function OAuthForm({ onDone }: { onDone: () => void }) {
-  const { pop } = useNavigation();
-  const p = prefs();
-  const [busy, setBusy] = useState(false);
-  return (
-    <Form
-      isLoading={busy}
-      navigationTitle="Browser Sign-in"
-      actions={
-        <ActionPanel>
-          <Action.SubmitForm
-            title="Sign in"
-            icon={Icon.Globe}
-            onSubmit={async (values: { clientId: string; secret: string; redirect: RedirectChoice }) => {
-              const clientId = values.clientId.trim();
-              if (!clientId || !values.secret.trim()) {
-                await showToast({ style: Toast.Style.Failure, title: "Enter the client ID and the client secret" });
-                return;
-              }
-              setBusy(true);
-              try {
-                await oauthSignIn(clientId, values.secret.trim(), values.redirect);
-                onDone();
-                pop();
-                await refresh({ full: true });
-              } catch (error) {
-                await showToast({ style: Toast.Style.Failure, title: "Browser sign-in failed", message: errorMessage(error) });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-        </ActionPanel>
-      }
-    >
-      <Form.Description text="Register an app at developer.ticktick.com/manage and add the redirect URI below to it. The secret is used once and not stored." />
-      <Form.TextField id="clientId" title="Client ID" defaultValue={p.clientId ?? ""} info="Saved in preferences, not here." />
-      <Form.PasswordField id="secret" title="Client secret" />
-      <Form.Dropdown id="redirect" title="Redirect URI" defaultValue={p.oauthRedirect}>
-        <Form.Dropdown.Item value="web" title="https://raycast.com/redirect?packageName=Extension" />
-        <Form.Dropdown.Item value="tinycast" title="tinycast://oauth" />
-        <Form.Dropdown.Item value="app" title="raycast://oauth?package_name=Extension" />
-      </Form.Dropdown>
     </Form>
   );
 }

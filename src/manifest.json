@@ -111,26 +111,6 @@
       ]
     },
     {
-      "name": "clientId",
-      "title": "OAuth client ID",
-      "description": "Client ID of your own TickTick developer app, for browser sign-in. Leave empty to use an API token.",
-      "type": "textfield",
-      "required": false
-    },
-    {
-      "name": "oauthRedirect",
-      "title": "OAuth redirect",
-      "description": "The redirect URI registered in your TickTick developer app.",
-      "type": "dropdown",
-      "required": false,
-      "default": "web",
-      "data": [
-        { "title": "https://raycast.com/redirect?packageName=Extension", "value": "web" },
-        { "title": "tinycast://oauth", "value": "tinycast" },
-        { "title": "raycast://oauth?package_name=Extension", "value": "app" }
-      ]
-    },
-    {
       "name": "safeUpdates",
       "title": "Safe edits",
       "label": "Fetch a task before each edit",

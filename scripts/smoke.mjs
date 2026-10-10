@@ -60,18 +60,43 @@ function findAll(node, pred, out = []) {
   return out;
 }
 
+// Answers /usr/bin/security from memory, so the smoke run never touches the real Keychain.
+// child_process is a sync host call, which the harness's async stubs do not cover.
+function fakeKeychain(harness, items) {
+  const host = harness.context.__tinycastHost;
+  const invokeSync = host.invokeSync.bind(host);
+  const b64 = (s) => Buffer.from(s).toString("base64");
+  host.invokeSync = (api, method, argsJson) => {
+    const spec = JSON.parse(argsJson)[0];
+    if (api !== "proc" || method !== "run" || spec?.command !== "/usr/bin/security") return invokeSync(api, method, argsJson);
+    const [verb, ...rest] = spec.args;
+    const account = rest[rest.indexOf("-a") + 1];
+    let status = 0, stdout = "";
+    if (verb === "find-generic-password") {
+      if (items[account] === undefined) status = 44;
+      else stdout = `${items[account]}\n`;
+    } else if (verb === "delete-generic-password") {
+      if (items[account] === undefined) status = 44;
+      delete items[account];
+    } else {
+      status = 1;
+    }
+    return JSON.stringify({ ok: true, value: { stdout: b64(stdout), stderr: "", status } });
+  };
+}
+
 async function run(commandName, { args = {}, signedIn = true, interact, v2 = false } = {}) {
   const cmd = manifest.commands.find((c) => c.name === commandName);
   const calls = [], toasts = [];
   const harness = createHarness({
     verbose: !!process.env.VERBOSE,
     stubs: {
-      "oauth.getTokens": () => (signedIn ? JSON.stringify({ accessToken: "tok", scope: "token", ...(v2 ? { idToken: "t=cookie123" } : {}), updatedAt: new Date().toISOString() }) : null),
       "fetch.request": fakeServer(calls),
       "feedback.showToast": (a) => { toasts.push(JSON.stringify(a[0]?.title ?? a)); return "toast-1"; },
       "feedback.showHUD": (a) => { toasts.push(`HUD ${JSON.stringify(a)}`); return null; },
     },
   });
+  fakeKeychain(harness, { "api-token": signedIn ? "tok" : undefined, "v2-cookie": v2 ? "t=cookie123" : undefined });
   harness.boot(bootConfig({
     environment: { ...bootConfig().environment, extensionName: manifest.name, commandName, commandMode: cmd.mode, assetsPath: join(dist, "assets") },
     preferences: { ...Object.fromEntries(manifest.preferences.map((p) => [p.name, preferenceDefault(p)])), ...(v2 ? { enableV2: true } : {}) },

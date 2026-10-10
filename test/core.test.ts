@@ -3,7 +3,6 @@ import { OpenApi } from "../src/api/client";
 import { formatTickTickTime, nextMonday, parseTickTickTime, taskDayKey } from "../src/api/dates";
 import { TickTickApiError } from "../src/api/errors";
 import { V2Api, normalizeSessionCookie } from "../src/api/v2";
-import { base64 } from "../src/auth/base64";
 import { applyV2Delta, isStale, mapLimit, snapshotFromV2, syncOpen, syncV2 } from "../src/store/snapshot";
 import { UndoStack, previousFields } from "../src/undo/stack";
 import { datePatch, diffFields, toggleTagPatch } from "../src/views/patches";
@@ -23,14 +22,6 @@ describe("dates", () => {
 
   it("finds next Monday", () => {
     expect(nextMonday(TODAY).getDate()).toBe(12);
-  });
-});
-
-describe("base64", () => {
-  it("matches Node's encoder", () => {
-    for (const s of ["a", "ab", "abc", "client:secret", "ünïcode:sëcret"]) {
-      expect(base64(s)).toBe(Buffer.from(s).toString("base64"));
-    }
   });
 });
 

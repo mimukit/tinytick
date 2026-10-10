@@ -26,12 +26,11 @@ In Tinycast, open Settings › Extensions › Install New › Add from folder, a
 
 ## Sign in
 
-Run the **Account** command.
+In TickTick, open Settings › Account › API Token and create a token. Then run the **Account** command, pick "Sign in with an API token", and paste it.
 
-- **API token.** In TickTick, open Settings › Account › API Token, create a token, and paste it. This is the simplest way.
-- **Browser.** Register an app at [developer.ticktick.com/manage](https://developer.ticktick.com/manage). Add one of the redirect URIs that the Account form lists. Put the client ID in the extension preferences, then sign in from Account with the client secret. tinytick uses the secret once and does not store it.
+tinytick keeps the token, and the v2 cookie if you set one, in your login Keychain under the service `tinytick`. It reads and writes them with `/usr/bin/security`, and sends a secret to it on stdin, so the secret never appears in the process list. Tinycast keeps preferences, LocalStorage and Cache as plaintext JSON, so no secret goes there.
 
-tinytick stores the token in the macOS Keychain. Tinycast keeps preferences, LocalStorage and Cache as plaintext JSON, so no secret goes there.
+There is no browser sign-in. Tinycast dropped extension OAuth support in `v0.11.17-beta.115`.
 
 ## Commands
 
@@ -93,7 +92,6 @@ On the task screen, type in the search bar and press Enter to add a checklist it
 
 - **Refresh on open:** refresh in the background when the cache is older than 5, 10 (default), 30 or 60 minutes, or never.
 - **Quick Add pre-fill:** nothing, the clipboard or the selected text.
-- **OAuth client ID** and **OAuth redirect:** for browser sign-in.
 - **Safe edits:** fetch a task before each edit. Turn it on if TickTick drops fields on a partial update.
 - **Unofficial v2 API:** one-call sync, Won't Do (`⌘⇧W`) and pin (`⌘⇧P`). It needs the `t` session cookie from a logged-in browser, set in Account. The v2 API is undocumented and can break.
 

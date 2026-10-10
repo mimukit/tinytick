@@ -10,7 +10,8 @@ import { openApi } from "../store/service";
 import { projectName } from "../store/snapshot";
 import { VIEW_TITLES, childTasks, groupTasks, selectView, sortTasks, type GroupBy, type SortBy, type ViewId } from "../views/select";
 import { AccountView, TokenForm } from "./AccountView";
-import { taskAccessories, taskIcon, taskMarkdown } from "./format";
+import { taskAccessories, taskIcon } from "./format";
+import { TaskDetail } from "./TaskDetail";
 import { CompletedTaskActions, TaskActions, UndoAction, ViewActions, type ListControls } from "./TaskActions";
 
 export interface TaskListViewProps {
@@ -183,7 +184,7 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
               icon={taskIcon(task)}
               keywords={[...(task.tags ?? []).map((t) => `#${t}`), projectName(snapshot, task.projectId)]}
               accessories={showDetail ? undefined : taskAccessories(task, snapshot, { showList: !projectId && groupBy !== "list", childCount: childTasks(snapshot, task.id).length })}
-              detail={<List.Item.Detail markdown={taskMarkdown(task)} />}
+              detail={<TaskDetail task={task} snapshot={snapshot} />}
               actions={<TaskActions task={task} controls={controls} />}
             />
           ))}
@@ -198,7 +199,7 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
               title={task.title}
               icon={taskIcon({ ...task, status: 2 })}
               accessories={showDetail ? undefined : [{ text: projectName(snapshot, task.projectId) }]}
-              detail={<List.Item.Detail markdown={taskMarkdown(task)} />}
+              detail={<TaskDetail task={{ ...task, status: 2 }} snapshot={snapshot} />}
               actions={
                 <CompletedTaskActions
                   task={task}

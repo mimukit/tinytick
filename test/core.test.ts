@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OpenApi } from "../src/api/client";
-import { formatTickTickTime, nextMonday, parseTickTickTime, taskDayKey } from "../src/api/dates";
+import { formatTickTickTime, nextMonday, parseTickTickTime, reminderLabel, taskDayKey } from "../src/api/dates";
 import { TickTickApiError } from "../src/api/errors";
 import { V2Api, normalizeSessionCookie } from "../src/api/v2";
 import { applyV2Delta, isStale, mapLimit, snapshotFromV2, syncOpen, syncV2 } from "../src/store/snapshot";
@@ -207,5 +207,17 @@ describe("patches", () => {
   it("diffs only changed fields, treating empty as unset", () => {
     const t = task({ title: "x", priority: 3 });
     expect(diffFields(t, { title: "x", priority: 5, content: "", tags: [] })).toEqual({ priority: 5 });
+  });
+});
+
+describe("reminderLabel", () => {
+  it("reads TickTick triggers", () => {
+    expect(reminderLabel("TRIGGER:PT0S")).toBe("On time");
+    expect(reminderLabel("TRIGGER:-PT30M")).toBe("30 min before");
+    expect(reminderLabel("TRIGGER:-PT1H")).toBe("1 hour before");
+    expect(reminderLabel("TRIGGER:-P1D")).toBe("1 day before");
+    expect(reminderLabel("TRIGGER:-P2DT9H")).toBe("2 days 9 hours before");
+    expect(reminderLabel("TRIGGER:P0DT9H0M0S")).toBe("9 hours after");
+    expect(reminderLabel("odd")).toBe("odd");
   });
 });

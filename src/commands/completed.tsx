@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { addDays, formatTickTickTime, formatDueLabel, parseTickTickTime, startOfDay } from "../api/dates";
 import { errorMessage } from "../api/errors";
 import type { Task } from "../api/types";
-import { taskIcon, taskMarkdown } from "../components/format";
+import { taskIcon } from "../components/format";
+import { TaskDetail } from "../components/TaskDetail";
 import { CompletedTaskActions } from "../components/TaskActions";
 import { useLive } from "../store/live";
 import { openApi } from "../store/service";
@@ -71,7 +72,7 @@ export default function Command() {
               { text: projectName(snapshot, task.projectId) },
               ...(done ? [{ text: formatDueLabel(done, false), tooltip: "Completed" }] : []),
             ]}
-            detail={<List.Item.Detail markdown={taskMarkdown(task)} />}
+            detail={<TaskDetail task={task} snapshot={snapshot} />}
             actions={<CompletedTaskActions task={task} onReopened={() => setTasks((l) => l?.filter((t) => t.id !== task.id))} />}
           />
         );

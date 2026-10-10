@@ -95,3 +95,21 @@ export function formatDueLabel(date: Date, isAllDay: boolean, now = new Date()):
   else label = SHORT_DATE.format(date);
   return isAllDay ? label : `${label} ${TIME.format(date)}`;
 }
+
+/** A TickTick reminder trigger as text: "TRIGGER:-PT30M" is "30 min before", "TRIGGER:PT0S" is "On time". */
+export function reminderLabel(trigger: string): string {
+  const m = /^TRIGGER:(-)?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(trigger);
+  if (!m) return trigger;
+  const [, before, w, d, h, min] = m;
+  const units: [number, string][] = [
+    [Number(w ?? 0), "week"],
+    [Number(d ?? 0), "day"],
+    [Number(h ?? 0), "hour"],
+    [Number(min ?? 0), "min"],
+  ];
+  const parts = units
+    .filter(([n]) => n)
+    .map(([n, unit]) => `${n} ${unit}${n !== 1 && unit !== "min" ? "s" : ""}`);
+  if (!parts.length) return "On time";
+  return `${parts.join(" ")} ${before ? "before" : "after"}`;
+}

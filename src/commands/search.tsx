@@ -2,7 +2,8 @@ import { Action, ActionPanel, Icon, List, Toast, showToast, useNavigation } from
 import { useEffect, useState } from "react";
 import { errorMessage } from "../api/errors";
 import type { Task } from "../api/types";
-import { taskAccessories, taskIcon, taskMarkdown } from "../components/format";
+import { taskAccessories, taskIcon } from "../components/format";
+import { TaskDetail } from "../components/TaskDetail";
 import { QuickAddAction, TaskActions } from "../components/TaskActions";
 import { refreshIfStale } from "../store/actions";
 import { useLive } from "../store/live";
@@ -105,7 +106,7 @@ function ServerResults({ keywords }: { keywords: string }) {
             key={task.id}
             title={cached.title}
             icon={taskIcon(cached)}
-            detail={<List.Item.Detail markdown={taskMarkdown(cached)} />}
+            detail={<TaskDetail task={cached} snapshot={snapshot} />}
             actions={isOpen(cached) ? <TaskActions task={cached} /> : undefined}
           />
         );

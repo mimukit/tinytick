@@ -5,11 +5,11 @@ import type { ChecklistItem, Task } from "../api/types";
 import { newObjectId } from "../parse/quickadd";
 import { addSubtask, create, setChecklist, setParent } from "../store/actions";
 import { useLive } from "../store/live";
-import { projectName } from "../store/snapshot";
 import { checklistProgress, childTasks } from "../views/select";
-import { dueText, priorityLabel, taskAccessories, taskIcon, taskMarkdown } from "./format";
+import { taskAccessories, taskIcon } from "./format";
 import { Picker } from "./Picker";
 import { TaskActions } from "./TaskActions";
+import { TaskDetail } from "./TaskDetail";
 
 function sortedItems(task: Task): ChecklistItem[] {
   return [...(task.items ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -133,27 +133,7 @@ export function TaskScreen({ taskId, fallback }: { taskId: string; fallback?: Ta
           id={`task-${task.id}`}
           title={task.title}
           icon={taskIcon(task)}
-          detail={
-            <List.Item.Detail
-              markdown={taskMarkdown(task)}
-              metadata={
-                <List.Item.Detail.Metadata>
-                  <List.Item.Detail.Metadata.Label title="List" text={projectName(snapshot, task.projectId)} />
-                  <List.Item.Detail.Metadata.Label title="Due" text={dueText(task) ?? "No date"} />
-                  <List.Item.Detail.Metadata.Label title="Priority" text={priorityLabel(task)} />
-                  {task.repeatFlag && <List.Item.Detail.Metadata.Label title="Repeat" text={task.repeatFlag.replace("RRULE:", "")} />}
-                  {!!task.tags?.length && (
-                    <List.Item.Detail.Metadata.TagList title="Tags">
-                      {task.tags.map((t) => (
-                        <List.Item.Detail.Metadata.TagList.Item key={t} text={`#${t}`} color={Color.Purple} />
-                      ))}
-                    </List.Item.Detail.Metadata.TagList>
-                  )}
-                  {progress && <List.Item.Detail.Metadata.Label title="Checklist" text={progress} />}
-                </List.Item.Detail.Metadata>
-              }
-            />
-          }
+          detail={<TaskDetail task={task} snapshot={snapshot} />}
           actions={
             (task.status ?? 0) === 0 ? (
               <TaskActions task={task} />
@@ -172,7 +152,7 @@ export function TaskScreen({ taskId, fallback }: { taskId: string; fallback?: Ta
             id={`item-${item.id}`}
             title={item.title}
             icon={item.status === 1 ? { source: Icon.CheckCircle, tintColor: Color.Green } : Icon.Circle}
-            detail={<List.Item.Detail markdown={taskMarkdown(task)} />}
+            detail={<TaskDetail task={task} snapshot={snapshot} />}
             actions={
               <ActionPanel>
                 {addAction}
@@ -222,7 +202,7 @@ export function TaskScreen({ taskId, fallback }: { taskId: string; fallback?: Ta
               title={child.title}
               icon={taskIcon(child)}
               accessories={taskAccessories(child, snapshot, { showList: false })}
-              detail={<List.Item.Detail markdown={taskMarkdown(child)} />}
+              detail={<TaskDetail task={child} snapshot={snapshot} />}
               actions={<TaskActions task={child} />}
             />
           ))}

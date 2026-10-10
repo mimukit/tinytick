@@ -36,7 +36,7 @@ function useStoredState<T extends string>(key: string, initial: T): [T, (v: T) =
 export function TaskListView({ fixedView, title }: TaskListViewProps) {
   const { snapshot, loading } = useLive();
   const [view, setView] = useState<ViewId>(fixedView ?? "today");
-  const [groupBy, setGroupBy] = useStoredState<GroupBy>("groupBy", "time");
+  const [groupBy, setGroupBy] = useStoredState<GroupBy>("groupBy", "priority");
   const [sortBy, setSortBy] = useStoredState<SortBy>("sortBy", "date");
   const [showDetail, setShowDetail] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);

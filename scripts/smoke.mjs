@@ -133,12 +133,36 @@ async function press(ctx, title) {
   await new Promise((r) => setTimeout(r, 300));
 }
 
+// The action on the row with this title, so a test does not depend on row order.
+async function pressOn(ctx, row, title) {
+  const item = findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "List.Item" && n.props?.title === row).at(-1);
+  assert.ok(item, `row "${row}" exists`);
+  const a = actionNamed(item.props.actions, title);
+  assert.ok(a, `action "${title}" exists on "${row}"`);
+  ctx.harness.dispatch("s1", a.props.onAction.$fn, []);
+  await new Promise((r) => setTimeout(r, 300));
+}
+
+// Chooses a value in the open picker's dropdown, as Tinycast does when you press ↵ on an item.
+async function choose(ctx, value) {
+  const field = findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "Form.Dropdown").at(-1);
+  assert.ok(field, "a picker dropdown is open");
+  const values = findAll(field, (n) => n.type === "Form.Dropdown.Item").map((n) => n.props.value);
+  assert.ok(values.includes(value), `picker offers "${value}": ${values}`);
+  ctx.harness.dispatch("s1", field.props.onTinycastChange.$fn, [value]);
+  await new Promise((r) => setTimeout(r, 300));
+  const screens = ctx.harness.state.trees.at(-1).children ?? [];
+  assert.equal(screens.length, 1, `the picker closes after a choice: ${screens.length} screens`);
+}
+
 let failures = 0;
 const sent = (calls, re) => calls.some((c) => re.test(c));
 
 failures += await run("today", { interact: async (ctx) => {
-  await press(ctx, "Priority High");
-  await press(ctx, "Due Tomorrow");
+  await pressOn(ctx, "Write report", "Set Priority…");
+  await choose(ctx, "5");
+  await pressOn(ctx, "Write report", "Set Date…");
+  await choose(ctx, "Tomorrow");
   await press(ctx, "Complete");
   const undo = findAll(ctx.harness.state.trees.at(-1), (n) => /^Undo/.test(n.props?.title ?? ""))[0];
   assert.ok(undo, "an Undo action shows after a write");
@@ -152,7 +176,7 @@ failures += await run("today", { interact: async (ctx) => {
   assert.ok(sent(ctx.calls, /^POST \/open\/v1\/task\/completed/), "show completed fetches");
 }});
 failures += await run("today", { interact: async (ctx) => {
-  await press(ctx, "Open Task");
+  await pressOn(ctx, "Write report", "Open Task");
   await press(ctx, "Check");
   const list = findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "List" && n.props?.onSearchTextChange?.$fn).at(-1);
   ctx.harness.dispatch("s1", list.props.onSearchTextChange.$fn, ["Proofread"]);
@@ -160,6 +184,16 @@ failures += await run("today", { interact: async (ctx) => {
   await press(ctx, "Add Item");
   assert.ok(sent(ctx.calls, /"title":"Draft","status":1/), "check item");
   assert.ok(sent(ctx.calls, /"title":"Proofread","status":0,"sortOrder":2/), "add item");
+}});
+failures += await run("today", { interact: async (ctx) => {
+  const sectionTitles = () => findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "List.Section").map((n) => n.props.title);
+  assert.ok(sectionTitles().every((t) => ["High", "Medium", "Low", "No Priority"].includes(t)), `grouped by priority by default: ${sectionTitles()}`);
+  await pressOn(ctx, "Pay rent", "Group By…");
+  await choose(ctx, "time");
+  assert.equal(sectionTitles().at(-1), "Overdue", `Overdue is the last time section: ${sectionTitles()}`);
+  const menu = findAll(ctx.tree, (n) => n.type === "List.Item" && n.props.title === "Pay rent")[0];
+  const titles = findAll(menu.props.actions, (n) => n.type === "Action").map((n) => n.props.title);
+  assert.ok(titles.length <= 20, `action panel stays short: ${titles.length}`);
 }});
 failures += await run("today", { signedIn: false, interact: async (ctx) => {
   // Rows, not an EmptyView: Tinycast shows the ↵ and ⌘K pill only when a row is selected.

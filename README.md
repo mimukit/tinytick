@@ -3,7 +3,7 @@
 A TickTick extension for the [Tinycast](https://github.com/abue-ammar/tinycast) launcher on macOS. It talks to the TickTick web API directly, so the TickTick desktop app does not have to run in the background.
 
 - Quick Add in one line: `call bank tomorrow 3pm !high #admin ~Personal`
-- A Today list you drive from the keyboard: complete with Enter, set priority with `⌃0`–`⌃3`, move the date with `⌘1`–`⌘3`, undo with `⌘Z`
+- A Today list you drive from the keyboard: complete with Enter, set priority with `⌘P`, move the date with `⌘D`, undo with `⌘Z`
 - Checklist items managed from the launcher
 - A local cache, so lists open at once. Writes go straight to TickTick.
 
@@ -53,15 +53,14 @@ There is no browser sign-in. Tinycast dropped extension OAuth support in `v0.11.
 | `↵` | Complete. On a completed row, open the task. |
 | `⌘↵` | Open the task: details, checklist, subtasks |
 | `⌘Z` | Undo the last change (up to 10, while the window is open) |
-| `⌃0` `⌃1` `⌃2` `⌃3` | Priority none, low, medium, high |
-| `⌘1` `⌘2` `⌘3` | Due today, tomorrow, next Monday |
-| `⌘D` | More dates, type a date, clear the date |
+| `⌘D` | Set the date: a preset, a typed date, or clear |
+| `⌘P` | Set the priority |
 | `⌘M` | Move to a list |
-| `⌘⇧T` | Toggle tags |
+| `⌘⇧T` | Toggle a tag |
 | `⌘E` | Edit the task |
 | `⌘N` | Quick Add with this view's defaults |
 | `⌘⇧N` | Add a checklist item |
-| `⌘⇧G` / `⌘⇧S` | Group by / sort by |
+| `⌘⇧G` / `⌘⇧S` | Group by (time, list, priority, tag) / sort by |
 | `⌘⇧C` | Show or hide today's completed tasks |
 | `⌘I` | Show or hide the details panel |
 | `⌘R` | Sync now |

@@ -11,7 +11,7 @@ import { projectName } from "../store/snapshot";
 import { VIEW_TITLES, childTasks, groupTasks, selectView, sortTasks, type GroupBy, type SortBy, type ViewId } from "../views/select";
 import { AccountView, TokenForm } from "./AccountView";
 import { taskAccessories, taskIcon, taskMarkdown } from "./format";
-import { CompletedTaskActions, QuickAddAction, TaskActions, UndoAction, ViewActions, type ListControls } from "./TaskActions";
+import { CompletedTaskActions, TaskActions, UndoAction, ViewActions, type ListControls } from "./TaskActions";
 
 export interface TaskListViewProps {
   /** A fixed view, such as one list. Without it, the search bar dropdown picks the view. */
@@ -143,9 +143,8 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
   const isEmpty = total === 0 && !(showCompleted && completed?.length);
   const emptyActions = (
     <ActionPanel>
-      <QuickAddAction controls={controls} />
-      <UndoAction />
       <ViewActions controls={controls} />
+      <UndoAction />
     </ActionPanel>
   );
 

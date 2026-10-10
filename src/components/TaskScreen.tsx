@@ -8,6 +8,7 @@ import { useLive } from "../store/live";
 import { projectName } from "../store/snapshot";
 import { checklistProgress, childTasks } from "../views/select";
 import { dueText, priorityLabel, taskAccessories, taskIcon, taskMarkdown } from "./format";
+import { Picker } from "./Picker";
 import { TaskActions } from "./TaskActions";
 
 function sortedItems(task: Task): ChecklistItem[] {
@@ -91,11 +92,16 @@ export function TaskScreen({ taskId, fallback }: { taskId: string; fallback?: Ta
           }}
         />
       )}
-      <ActionPanel.Submenu title="Set Parent Task…" icon={Icon.ArrowUp}>
-        {siblings.map((s) => (
-          <Action key={s.id} title={s.title} onAction={() => void setParent(task, s.id)} />
-        ))}
-      </ActionPanel.Submenu>
+      <Action.Push
+        title="Set Parent Task…"
+        icon={Icon.ArrowUp}
+        target={
+          <Picker
+            title="Set Parent Task"
+            options={siblings.map((s) => ({ id: s.id, title: s.title, selected: s.id === task.parentId, onPick: () => setParent(task, s.id) }))}
+          />
+        }
+      />
       {task.parentId && <Action title="Remove Parent" icon={Icon.ArrowDown} onAction={() => void setParent(task, "")} />}
     </ActionPanel.Section>
   );

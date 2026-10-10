@@ -1,0 +1,83 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "tinytick",
+  "title": "Tinytick",
+  "description": "Manage TickTick tasks from the launcher over the TickTick web API. No desktop app needed.",
+  "icon": "icon.png",
+  "author": "mimukit",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "platforms": ["macOS"],
+  "commands": [
+    {
+      "name": "tasks",
+      "title": "Tasks",
+      "subtitle": "TickTick",
+      "description": "Today, upcoming, lists and completed TickTick tasks, with search and keyboard actions.",
+      "mode": "view"
+    },
+    {
+      "name": "add-task",
+      "title": "Add Task",
+      "subtitle": "TickTick",
+      "description": "Add a TickTick task in natural language with a live preview.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "text",
+          "type": "text",
+          "placeholder": "call bank tomorrow 3pm !high",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "refreshAge",
+      "title": "Refresh on open",
+      "description": "Refresh in the background when the cache is older than this.",
+      "type": "dropdown",
+      "required": false,
+      "default": "10",
+      "data": [
+        { "title": "After 5 minutes", "value": "5" },
+        { "title": "After 10 minutes", "value": "10" },
+        { "title": "After 30 minutes", "value": "30" },
+        { "title": "After 60 minutes", "value": "60" },
+        { "title": "Never", "value": "never" }
+      ]
+    },
+    {
+      "name": "prefill",
+      "title": "Add Task pre-fill",
+      "description": "Text to put in Add Task when it opens with no argument.",
+      "type": "dropdown",
+      "required": false,
+      "default": "none",
+      "data": [
+        { "title": "Nothing", "value": "none" },
+        { "title": "Clipboard", "value": "clipboard" },
+        { "title": "Selected text", "value": "selection" }
+      ]
+    },
+    {
+      "name": "safeUpdates",
+      "title": "Safe edits",
+      "label": "Fetch a task before each edit",
+      "description": "Turn on if TickTick drops fields on a partial update.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "enableV2",
+      "title": "Unofficial v2 API",
+      "label": "Use the TickTick web API for extras",
+      "description": "One-call sync, Won't Do, pin and subtask links. Needs a session cookie from the Account screen (⌘⇧A in Tasks). Unofficial and can break.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    }
+  ]
+}

@@ -10,6 +10,7 @@ tinytick is a TickTick extension for the [Tinycast](https://github.com/abue-amma
 - `pnpm typecheck`, `pnpm test`
 - `pnpm build` writes `dist/`
 - `pnpm build:install` builds and copies `dist/` into Tinycast's extensions folder (macOS only)
+- `pnpm smoke <tinycast-checkout>` runs the built bundles in Tinycast's JS runtime against a fake TickTick server. Run it after `pnpm build` when you change a command or a component.
 
 ## Rules for agents
 

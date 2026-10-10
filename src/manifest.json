@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "tinytick",
-  "title": "tinytick",
+  "title": "Tinytick",
   "description": "Manage TickTick tasks from the launcher over the TickTick web API. No desktop app needed.",
   "icon": "icon.png",
   "author": "mimukit",

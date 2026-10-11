@@ -157,7 +157,7 @@ export function UndoAction() {
   );
 }
 
-/** The actions for an open task row. Enter completes the task. */
+/** The actions for an open task row. Enter opens the task, and ⌘Enter completes it. */
 export function TaskActions({ task, controls }: { task: Task; controls?: ListControls }) {
   const { push } = useNavigation();
   const { snapshot } = useLive();
@@ -184,12 +184,12 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
   return (
     <ActionPanel title={task.title}>
       <ActionPanel.Section>
-        <Action title="Complete" icon={Icon.CheckCircle} onAction={() => void complete(task)} />
+        <Action title="Open Task" icon={Icon.Sidebar} onAction={() => push(<TaskScreen taskId={task.id} />)} />
         <Action
-          title="Open Task"
-          icon={Icon.Sidebar}
+          title="Complete"
+          icon={Icon.CheckCircle}
           shortcut={{ modifiers: ["cmd"], key: "return" }}
-          onAction={() => push(<TaskScreen taskId={task.id} />)}
+          onAction={() => void complete(task)}
         />
         <UndoAction />
       </ActionPanel.Section>

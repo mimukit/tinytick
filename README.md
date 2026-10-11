@@ -45,8 +45,8 @@ Sync and Account are actions in Tasks: `⌘R` syncs, and `⌘⇧A` opens Account
 
 | Key | Action |
 |-----|--------|
-| `↵` | Complete. On a completed row, open the task. |
-| `⌘↵` | Open the task: details, checklist, subtasks |
+| `↵` | Open the task: details, checklist, subtasks |
+| `⌘↵` | Complete |
 | `⌘Z` | Undo the last change (up to 10, while the window is open) |
 | `⌘1` `⌘2` `⌘3` | Due today, tomorrow, next Monday |
 | `⌘D` | Set the date: a preset, a typed date, or clear |

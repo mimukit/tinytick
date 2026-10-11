@@ -26,6 +26,8 @@ export interface ListControls {
   toggleCompleted: () => void;
   showDetail: boolean;
   toggleDetail: () => void;
+  /** Re-sorts and re-groups the rows that edits hold in place. */
+  refreshList: () => void;
   /** Defaults for Add Task opened from this view. */
   quickAddDefaults?: { projectId?: string; dueToday?: boolean };
   /** The search bar text, for the server search. */
@@ -97,6 +99,12 @@ export function ViewActions({ controls }: { controls: ListControls }) {
         icon={Icon.Sidebar}
         shortcut={{ modifiers: ["cmd"], key: "i" }}
         onAction={controls.toggleDetail}
+      />
+      <Action
+        title="Refresh List"
+        icon={Icon.List}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+        onAction={controls.refreshList}
       />
       <Action title="Sync Now" icon={Icon.ArrowClockwise} shortcut={{ modifiers: ["cmd"], key: "r" }} onAction={() => void refresh({ full: true })} />
       <ServerSearchAction text={controls.searchText} />

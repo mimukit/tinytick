@@ -60,6 +60,7 @@ Sync and Account are actions in Tasks: `⌘R` syncs, and `⌘⇧A` opens Account
 | `⌘⇧G` / `⌘⇧S` | Group by (time, list, priority, tag) / sort by |
 | `⌘⇧C` | Show or hide today's completed tasks |
 | `⌘I` | Show or hide the details panel |
+| `⌘⇧R` | Refresh the list: re-sort and re-group the rows that edits held in place |
 | `⌘R` | Sync now |
 | `⌘⇧F` | Search on the server for the search bar text |
 | `⌘⇧A` | Open Account |
@@ -67,6 +68,8 @@ Sync and Account are actions in Tasks: `⌘R` syncs, and `⌘⇧A` opens Account
 | `⌘⌫` | Delete, after a confirmation |
 
 On the task screen, type in the search bar and press Enter to add a checklist item, or `⌘⇧↵` to add it as a subtask. Enter on an item checks it. `⌘⌥↑` and `⌘⌥↓` reorder items.
+
+An edit keeps its row in place, so the highlight stays on the task you changed. A task that now belongs in another group stays where it is until you press `⌘⇧R`, sync, or change the view, the grouping or the sort. `⌃N` and `⌃P` move the highlight down and up.
 
 ## Add Task syntax
 

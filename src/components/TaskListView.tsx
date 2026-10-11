@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Icon, List, LocalStorage, Toast, showToast } from "@raycast/api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, formatDueLabel, formatTickTickTime, parseTickTickTime, startOfDay } from "../api/dates";
 import { errorMessage } from "../api/errors";
 import type { Task } from "../api/types";
@@ -8,6 +8,7 @@ import { refreshIfStale } from "../store/actions";
 import { useLive } from "../store/live";
 import { openApi } from "../store/service";
 import { projectName } from "../store/snapshot";
+import { holdSections, layoutOf, type SectionLayout } from "../views/hold";
 import { COMPLETED_RANGES, VIEW_TITLES, childTasks, groupTasks, selectView, sortTasks, type GroupBy, type SortBy, type ViewId } from "../views/select";
 import { AccountView, TokenForm } from "./AccountView";
 import { taskAccessories, taskIcon } from "./format";
@@ -92,10 +93,21 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
     };
   }, [loadCompleted, projectId, completedRange]);
 
-  const sections = useMemo(() => {
+  const fresh = useMemo(() => {
     const tasks = sortTasks(selectView(snapshot, view), sortBy, snapshot);
     return groupTasks(tasks, groupBy, snapshot);
   }, [snapshot, view, groupBy, sortBy]);
+
+  // Edits keep each row in place, so Tinycast's highlight stays on the task.
+  // A sync, a new view, group or sort, or Refresh List re-sorts the rows.
+  const [refreshCount, setRefreshCount] = useState(0);
+  const held = useRef<{ key: string; layout: SectionLayout[] }>(undefined);
+  const holdKey = `${view}|${groupBy}|${sortBy}|${snapshot.syncedAt}|${refreshCount}`;
+  const sections = useMemo(() => {
+    const out = held.current?.key === holdKey ? holdSections(fresh, held.current.layout, snapshot.tasks) : fresh;
+    held.current = { key: holdKey, layout: layoutOf(out) };
+    return out;
+  }, [fresh, holdKey, snapshot.tasks]);
 
   const controls: ListControls = {
     groupBy,
@@ -106,6 +118,7 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
     toggleCompleted: () => setShowCompleted((v) => !v),
     showDetail,
     toggleDetail: () => setShowDetail((v) => !v),
+    refreshList: () => setRefreshCount((n) => n + 1),
     quickAddDefaults: {
       projectId: projectId ?? (view === "inbox" ? snapshot.inboxId : undefined),
       dueToday: view === "today",

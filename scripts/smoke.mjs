@@ -196,11 +196,22 @@ failures += await run("tasks", { interact: async (ctx) => {
   const titles = actions.map((n) => n.props.title);
   const keys = actions.map((n) => n.props.shortcut && `${n.props.shortcut.modifiers.join("+")}+${n.props.shortcut.key}`);
   for (const k of ["cmd+1", "cmd+2", "cmd+3", "ctrl+1", "ctrl+2", "ctrl+3"]) assert.ok(keys.includes(k), `row has the ${k} shortcut`);
-  assert.ok(titles.length <= 24, `action panel stays short: ${titles.length}`);
+  assert.ok(titles.length <= 25, `action panel stays short: ${titles.length}`);
   const labels = findAll(menu.props.detail, (n) => n.type === "Detail.Metadata.Label").map((n) => n.props.title);
   for (const t of ["List", "Date", "Priority"]) assert.ok(labels.includes(t), `the detail pane shows ${t}: ${labels}`);
   await pressOn(ctx, "Pay rent", "Priority Low");
   assert.ok(sent(ctx.calls, /"priority":1,/), "ctrl+3 sets low priority");
+}});
+failures += await run("tasks", { interact: async (ctx) => {
+  // Tinycast keeps the highlight on a row number, so an edited row must not move until a refresh.
+  const sectionOf = (row) =>
+    findAll(ctx.harness.state.trees.at(-1), (n) => n.type === "List.Section")
+      .find((s) => findAll(s, (n) => n.type === "List.Item" && n.props.title === row).length)?.props.title;
+  assert.equal(sectionOf("Pay rent"), "High", "Pay rent starts in High");
+  await pressOn(ctx, "Pay rent", "Priority Low");
+  assert.equal(sectionOf("Pay rent"), "High", "an edited row holds its place");
+  await pressOn(ctx, "Pay rent", "Refresh List");
+  assert.equal(sectionOf("Pay rent"), "Low", "Refresh List re-groups the row");
 }});
 failures += await run("tasks", { signedIn: false, interact: async (ctx) => {
   // Rows, not an EmptyView: Tinycast shows the ↵ and ⌘K pill only when a row is selected.

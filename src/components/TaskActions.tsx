@@ -103,10 +103,10 @@ export function ViewActions({ controls }: { controls: ListControls }) {
       <Action
         title="Refresh List"
         icon={Icon.List}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+        shortcut={{ modifiers: ["cmd"], key: "r" }}
         onAction={controls.refreshList}
       />
-      <Action title="Sync Now" icon={Icon.ArrowClockwise} shortcut={{ modifiers: ["cmd"], key: "r" }} onAction={() => void refresh({ full: true })} />
+      <Action title="Sync Now" icon={Icon.ArrowClockwise} shortcut={{ modifiers: ["cmd", "shift"], key: "r" }} onAction={() => void refresh({ full: true })} />
       <ServerSearchAction text={controls.searchText} />
       <Action.Push
         title="Account"

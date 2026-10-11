@@ -48,6 +48,8 @@ const PRIORITIES: { value: Priority; title: string }[] = [
   { value: 0, title: "None" },
 ];
 
+const PRIORITY_TITLES = Object.fromEntries(PRIORITIES.map((p) => [p.value, p.title])) as Record<Priority, string>;
+
 export function ViewActions({ controls }: { controls: ListControls }) {
   return (
     <ActionPanel.Section title="View">
@@ -161,7 +163,9 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
   const { snapshot } = useLive();
   const v2 = prefs().enableV2;
   const today = startOfDay(new Date());
-  const setDate = (day: Date | null, label: string) => void updateFields(task, datePatch(task, day), label);
+  const setDate = (day: Date | null, label: string, toast: string) => void updateFields(task, datePatch(task, day), label, { toast });
+  const setPriority = (p: Priority) =>
+    updateFields(task, { priority: p }, "Set priority", { toast: p ? `Priority set to ${PRIORITY_TITLES[p]}` : "Priority removed" });
   const pinned = !!task.pinnedTime && task.pinnedTime !== "-1";
   const lists = [
     ...(snapshot.inboxId ? [{ id: snapshot.inboxId, name: "Inbox" }] : []),
@@ -169,12 +173,12 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
   ];
   const tagNames = [...new Set([...snapshot.tags.map((t) => t.name), ...(task.tags ?? [])])];
 
-  const datePresets: { title: string; day: Date | null }[] = [
-    { title: "Today", day: today },
-    { title: "Tomorrow", day: addDays(today, 1) },
-    { title: "Day After Tomorrow", day: addDays(today, 2) },
-    { title: "Next Monday", day: nextMonday(today) },
-    { title: "In a Week", day: addDays(today, 7) },
+  const datePresets: { title: string; toast: string; day: Date | null }[] = [
+    { title: "Today", toast: "Due today", day: today },
+    { title: "Tomorrow", toast: "Due tomorrow", day: addDays(today, 1) },
+    { title: "Day After Tomorrow", toast: "Due the day after tomorrow", day: addDays(today, 2) },
+    { title: "Next Monday", toast: "Due next Monday", day: nextMonday(today) },
+    { title: "In a Week", toast: "Due in a week", day: addDays(today, 7) },
   ];
 
   return (
@@ -190,18 +194,18 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
         <UndoAction />
       </ActionPanel.Section>
       <ActionPanel.Section title="Quick Set">
-        <Action title="Due Today" icon={Icon.Calendar} shortcut={{ modifiers: ["cmd"], key: "1" }} onAction={() => setDate(today, "Set date")} />
+        <Action title="Due Today" icon={Icon.Calendar} shortcut={{ modifiers: ["cmd"], key: "1" }} onAction={() => setDate(today, "Set date", "Due today")} />
         <Action
           title="Due Tomorrow"
           icon={Icon.Calendar}
           shortcut={{ modifiers: ["cmd"], key: "2" }}
-          onAction={() => setDate(addDays(today, 1), "Set date")}
+          onAction={() => setDate(addDays(today, 1), "Set date", "Due tomorrow")}
         />
         <Action
           title="Due Next Week"
           icon={Icon.Calendar}
           shortcut={{ modifiers: ["cmd"], key: "3" }}
-          onAction={() => setDate(nextMonday(today), "Set date")}
+          onAction={() => setDate(nextMonday(today), "Set date", "Due next Monday")}
         />
         {QUICK_PRIORITIES.map((p) => (
           <Action
@@ -209,7 +213,7 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
             title={`Priority ${p.title}`}
             icon={{ source: Icon.Flag, tintColor: PRIORITY_COLOR[p.value] }}
             shortcut={{ modifiers: ["ctrl"], key: p.key }}
-            onAction={() => void updateFields(task, { priority: p.value }, "Set priority")}
+            onAction={() => void setPriority(p.value)}
           />
         ))}
       </ActionPanel.Section>
@@ -222,9 +226,9 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
             <Picker
               title="Set Date"
               options={[
-                ...datePresets.map((d) => ({ id: d.title, title: d.title, icon: Icon.Calendar, onPick: () => setDate(d.day, "Set date") })),
+                ...datePresets.map((d) => ({ id: d.title, title: d.title, icon: Icon.Calendar, onPick: () => setDate(d.day, "Set date", d.toast) })),
                 { id: "type", title: "Type a Date…", icon: Icon.Pencil, onPick: () => push(<DateForm task={task} />) },
-                { id: "clear", title: "Clear Date", icon: Icon.XMarkCircle, onPick: () => setDate(null, "Clear date") },
+                { id: "clear", title: "Clear Date", icon: Icon.XMarkCircle, onPick: () => setDate(null, "Clear date", "Date cleared") },
               ]}
             />
           }
@@ -241,7 +245,7 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
                 title: p.title,
                 icon: { source: Icon.Flag, tintColor: PRIORITY_COLOR[p.value] },
                 selected: (task.priority ?? 0) === p.value,
-                onPick: () => updateFields(task, { priority: p.value }, "Set priority"),
+                onPick: () => setPriority(p.value),
               }))}
             />
           }
@@ -253,7 +257,7 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
           target={
             <Picker
               title="Move to List"
-              options={lists.map((l) => ({ id: l.id, title: l.name, selected: l.id === task.projectId, onPick: () => move(task, l.id) }))}
+              options={lists.map((l) => ({ id: l.id, title: l.name, selected: l.id === task.projectId, onPick: () => move(task, l.id, { toast: `Moved to ${l.name}` }) }))}
             />
           }
         />
@@ -269,7 +273,10 @@ export function TaskActions({ task, controls }: { task: Task; controls?: ListCon
                 title: `#${name}`,
                 // Not `selected`: picking a tag the task has removes it.
                 icon: task.tags?.includes(name) ? Icon.Checkmark : Icon.Circle,
-                onPick: () => updateFields(task, toggleTagPatch(task, name), "Change tags"),
+                onPick: () =>
+                  updateFields(task, toggleTagPatch(task, name), "Change tags", {
+                    toast: task.tags?.includes(name) ? `Removed #${name}` : `Added #${name}`,
+                  }),
               }))}
             />
           }

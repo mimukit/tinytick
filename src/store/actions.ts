@@ -18,6 +18,15 @@ function snapshot(): Snapshot {
   return getLive().snapshot;
 }
 
+async function successToast(title: string, message: string, withUndo: boolean): Promise<void> {
+  await showToast({
+    style: Toast.Style.Success,
+    title,
+    message,
+    ...(withUndo ? { primaryAction: { title: "Undo", onAction: () => void undoLast() } } : {}),
+  });
+}
+
 async function fail(title: string, error: unknown): Promise<void> {
   await showToast({ style: Toast.Style.Failure, title, message: errorMessage(error) });
 }
@@ -57,8 +66,11 @@ function findTask(id: string): Task | undefined {
   return snapshot().tasks.find((t) => t.id === id);
 }
 
-/** Changes some fields of a task. Pushes an undo entry unless told not to. */
-export async function updateFields(task: Task, patch: TaskPatch, label: string, opts: { undo?: boolean } = {}): Promise<boolean> {
+/**
+ * Changes some fields of a task. Pushes an undo entry unless told not to.
+ * `toast` is the success toast title. Without it, a success shows no toast.
+ */
+export async function updateFields(task: Task, patch: TaskPatch, label: string, opts: { undo?: boolean; toast?: string } = {}): Promise<boolean> {
   const before = findTask(task.id) ?? task;
   const previous = previousFields(before, patch);
   commitSnapshot(patchTask(snapshot(), task.id, patch));
@@ -69,6 +81,7 @@ export async function updateFields(task: Task, patch: TaskPatch, label: string, 
       undo.push({ kind: "fields", label, taskId: task.id, projectId: before.projectId, previous });
       publishUndo();
     }
+    if (opts.toast) await successToast(opts.toast, before.title, opts.undo !== false);
     return true;
   } catch (error) {
     commitSnapshot(upsertTask(snapshot(), before));
@@ -106,12 +119,7 @@ export async function complete(task: Task): Promise<void> {
   }
   undo.push({ kind: "reopen", label: "Complete", taskId: task.id, projectId: task.projectId, task });
   publishUndo();
-  await showToast({
-    style: Toast.Style.Success,
-    title: "Completed",
-    message: task.title,
-    primaryAction: { title: "Undo", onAction: () => void undoLast() },
-  });
+  await successToast("Completed", task.title, true);
 }
 
 /** Reopens a completed or Won't Do task. */
@@ -127,7 +135,8 @@ export async function reopen(task: Task): Promise<boolean> {
   }
 }
 
-export async function move(task: Task, toProjectId: string, opts: { undo?: boolean } = {}): Promise<boolean> {
+/** Moves a task to another list. `toast` is the success toast title. */
+export async function move(task: Task, toProjectId: string, opts: { undo?: boolean; toast?: string } = {}): Promise<boolean> {
   if (task.projectId === toProjectId) return true;
   const fromProjectId = task.projectId;
   commitSnapshot(patchTask(snapshot(), task.id, { projectId: toProjectId }));
@@ -137,6 +146,7 @@ export async function move(task: Task, toProjectId: string, opts: { undo?: boole
       undo.push({ kind: "move", label: "Move", taskId: task.id, fromProjectId, toProjectId });
       publishUndo();
     }
+    if (opts.toast) await successToast(opts.toast, task.title, opts.undo !== false);
     return true;
   } catch (error) {
     commitSnapshot(upsertTask(snapshot(), task));
@@ -185,12 +195,29 @@ async function applyUndo(entry: UndoEntry): Promise<boolean> {
   return updateFields(task, entry.previous, entry.label, { undo: false });
 }
 
+/** The toast title after an undo, in words that say what the task is now. */
+function undoneTitle(entry: UndoEntry): string {
+  if (entry.kind === "reopen") return entry.label === "Complete" ? "Marked as not done" : "Reopened";
+  if (entry.kind === "move") return "Moved back to the old list";
+  return RESTORED[entry.label] ?? `${entry.label} undone`;
+}
+
+const RESTORED: Record<string, string> = {
+  "Set date": "Old date restored",
+  "Clear date": "Old date restored",
+  "Set priority": "Old priority restored",
+  "Change tags": "Old tags restored",
+  Edit: "Old task details restored",
+};
+
 /** Reverts the last row write in this window. */
 export async function undoLast(): Promise<void> {
   const entry = undo.pop();
   publishUndo();
   if (!entry) return;
-  if (await applyUndo(entry)) await showToast({ style: Toast.Style.Success, title: `Undid ${entry.label.toLowerCase()}` });
+  if (!(await applyUndo(entry))) return;
+  const title = findTask(entry.taskId)?.title ?? (entry.kind === "reopen" ? entry.task.title : undefined);
+  await showToast({ style: Toast.Style.Success, title: undoneTitle(entry), message: title });
 }
 
 export function setChecklist(task: Task, items: ChecklistItem[], label: string): Promise<boolean> {

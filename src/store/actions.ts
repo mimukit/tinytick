@@ -1,24 +1,40 @@
-// Every write a screen can make. Each one changes the cache first, calls the
-// server, and reverts with a failure toast on error.
+// Every write a screen can make. Each one changes the cache, pushes its undo
+// entry and shows its toast first, then calls the server. On error it reverts
+// the cache, drops the undo entry and shows a failure toast.
 import { Alert, Toast, confirmAlert, showToast } from "@raycast/api";
 import { errorMessage } from "../api/errors";
 import type { ChecklistItem, Task, TaskPatch } from "../api/types";
+import { WriteQueue } from "../api/queue";
 import { UndoStack, previousFields, type UndoEntry } from "../undo/stack";
 import { commitSnapshot, getLive, setLive } from "./live";
 import { openApi, prefs, syncNow, v2Api } from "./service";
 import { isStale, patchTask, removeTask, replaceProjectTasks, upsertTask, type Snapshot } from "./snapshot";
 
 const undo = new UndoStack();
+const writes = new WriteQueue();
 
 function publishUndo(): void {
   setLive({ undoSize: undo.size, undoLabel: undo.peek()?.label });
+}
+
+function pushUndo(entry: UndoEntry): UndoEntry {
+  undo.push(entry);
+  publishUndo();
+  return entry;
+}
+
+function dropUndo(entry: UndoEntry | undefined): void {
+  if (!entry) return;
+  undo.remove(entry);
+  publishUndo();
 }
 
 function snapshot(): Snapshot {
   return getLive().snapshot;
 }
 
-async function successToast(title: string, message: string, withUndo: boolean): Promise<void> {
+/** Not awaited by the writes, so the toast shows before the server answers. */
+async function successToast(title: string, message: string | undefined, withUndo: boolean): Promise<void> {
   await showToast({
     style: Toast.Style.Success,
     title,
@@ -74,17 +90,18 @@ export async function updateFields(task: Task, patch: TaskPatch, label: string, 
   const before = findTask(task.id) ?? task;
   const previous = previousFields(before, patch);
   commitSnapshot(patchTask(snapshot(), task.id, patch));
+  const entry = opts.undo !== false ? pushUndo({ kind: "fields", label, taskId: task.id, projectId: before.projectId, previous }) : undefined;
+  if (opts.toast) void successToast(opts.toast, before.title, !!entry);
   try {
-    const reply = await sendUpdate(before, patch);
-    if (reply && typeof reply === "object" && reply.id) commitSnapshot(upsertTask(snapshot(), { ...before, ...patch, ...reply }));
-    if (opts.undo !== false) {
-      undo.push({ kind: "fields", label, taskId: task.id, projectId: before.projectId, previous });
-      publishUndo();
-    }
-    if (opts.toast) await successToast(opts.toast, before.title, opts.undo !== false);
+    const reply = await writes.run(task.id, () => sendUpdate(before, patch));
+    // A later write for this task is still out. Its own reply is the newer one.
+    const latest = writes.pending(task.id) === 0;
+    const current = findTask(task.id);
+    if (latest && current && reply && typeof reply === "object" && reply.id) commitSnapshot(upsertTask(snapshot(), { ...current, ...reply }));
     return true;
   } catch (error) {
-    commitSnapshot(upsertTask(snapshot(), before));
+    commitSnapshot(patchTask(snapshot(), task.id, previous));
+    dropUndo(entry);
     await fail(`Could not ${label.toLowerCase()}`, error);
     return false;
   }
@@ -99,37 +116,39 @@ async function refetchProject(projectId: string): Promise<void> {
 
 export async function complete(task: Task): Promise<void> {
   commitSnapshot(removeTask(snapshot(), task.id));
+  // TickTick makes the next occurrence of a repeating task on the server.
+  // Reopen does not remove that occurrence, so a repeating complete gets no undo.
+  const entry = task.repeatFlag ? undefined : pushUndo({ kind: "reopen", label: "Complete", taskId: task.id, projectId: task.projectId, task });
+  void successToast("Completed", task.title, !!entry);
   try {
-    await (await openApi()).completeTask(task.projectId, task.id);
+    await writes.run(task.id, async () => (await openApi()).completeTask(task.projectId, task.id));
   } catch (error) {
     commitSnapshot(upsertTask(snapshot(), task));
+    dropUndo(entry);
     await fail("Could not complete the task", error);
     return;
   }
   if (task.repeatFlag) {
-    // TickTick makes the next occurrence on the server. Refetch the list to get it.
-    // Reopen does not remove that occurrence, so a repeating complete gets no undo.
+    // Refetch the list to get the next occurrence.
     try {
       await refetchProject(task.projectId);
     } catch (error) {
       await fail("Completed, but the next occurrence did not load", error);
     }
-    await showToast({ style: Toast.Style.Success, title: "Completed", message: task.title });
-    return;
   }
-  undo.push({ kind: "reopen", label: "Complete", taskId: task.id, projectId: task.projectId, task });
-  publishUndo();
-  await successToast("Completed", task.title, true);
 }
 
 /** Reopens a completed or Won't Do task. */
 export async function reopen(task: Task): Promise<boolean> {
+  const wasOpen = !!findTask(task.id);
+  commitSnapshot(upsertTask(snapshot(), { ...task, status: 0, completedTime: undefined }));
   try {
-    const reply = await (await openApi()).updateTask(task.id, task.projectId, { status: 0 });
-    const reopened: Task = { ...task, ...(reply && reply.id ? reply : {}), status: 0, completedTime: undefined };
-    commitSnapshot(upsertTask(snapshot(), reopened));
+    const reply = await writes.run(task.id, async () => (await openApi()).updateTask(task.id, task.projectId, { status: 0 }));
+    const current = findTask(task.id);
+    if (current && writes.pending(task.id) === 0 && reply && reply.id) commitSnapshot(upsertTask(snapshot(), { ...current, ...reply, status: 0, completedTime: undefined }));
     return true;
   } catch (error) {
+    commitSnapshot(wasOpen ? upsertTask(snapshot(), task) : removeTask(snapshot(), task.id));
     await fail("Could not reopen the task", error);
     return false;
   }
@@ -140,16 +159,14 @@ export async function move(task: Task, toProjectId: string, opts: { undo?: boole
   if (task.projectId === toProjectId) return true;
   const fromProjectId = task.projectId;
   commitSnapshot(patchTask(snapshot(), task.id, { projectId: toProjectId }));
+  const entry = opts.undo !== false ? pushUndo({ kind: "move", label: "Move", taskId: task.id, fromProjectId, toProjectId }) : undefined;
+  if (opts.toast) void successToast(opts.toast, task.title, !!entry);
   try {
-    await (await openApi()).moveTasks([{ fromProjectId, toProjectId, taskId: task.id }]);
-    if (opts.undo !== false) {
-      undo.push({ kind: "move", label: "Move", taskId: task.id, fromProjectId, toProjectId });
-      publishUndo();
-    }
-    if (opts.toast) await successToast(opts.toast, task.title, opts.undo !== false);
+    await writes.run(task.id, async () => (await openApi()).moveTasks([{ fromProjectId, toProjectId, taskId: task.id }]));
     return true;
   } catch (error) {
-    commitSnapshot(upsertTask(snapshot(), task));
+    commitSnapshot(patchTask(snapshot(), task.id, { projectId: fromProjectId }));
+    dropUndo(entry);
     await fail("Could not move the task", error);
     return false;
   }
@@ -163,9 +180,9 @@ export async function remove(task: Task): Promise<boolean> {
   });
   if (!ok) return false;
   commitSnapshot(removeTask(snapshot(), task.id));
+  void successToast("Deleted", task.title, false);
   try {
-    await (await openApi()).deleteTask(task.projectId, task.id);
-    await showToast({ style: Toast.Style.Success, title: "Deleted", message: task.title });
+    await writes.run(task.id, async () => (await openApi()).deleteTask(task.projectId, task.id));
     return true;
   } catch (error) {
     commitSnapshot(upsertTask(snapshot(), task));
@@ -210,14 +227,14 @@ const RESTORED: Record<string, string> = {
   Edit: "Old task details restored",
 };
 
-/** Reverts the last row write in this window. */
+/** Reverts the last row write in this window. On failure the entry goes back on the stack. */
 export async function undoLast(): Promise<void> {
   const entry = undo.pop();
   publishUndo();
   if (!entry) return;
-  if (!(await applyUndo(entry))) return;
   const title = findTask(entry.taskId)?.title ?? (entry.kind === "reopen" ? entry.task.title : undefined);
-  await showToast({ style: Toast.Style.Success, title: undoneTitle(entry), message: title });
+  void successToast(undoneTitle(entry), title, false);
+  if (!(await applyUndo(entry))) pushUndo(entry);
 }
 
 export function setChecklist(task: Task, items: ChecklistItem[], label: string): Promise<boolean> {
@@ -228,31 +245,36 @@ export function setChecklist(task: Task, items: ChecklistItem[], label: string):
 
 // v2 extras. The callers show these actions only when v2 is on.
 
-export async function wontDo(task: Task): Promise<void> {
+/** The v2 client for a write. It throws when the v2 cookie is missing. */
+async function v2ForWrite() {
   const v2 = await v2Api();
-  if (!v2) return;
+  if (!v2) throw new Error("Save a v2 cookie from the Account command.");
+  return v2;
+}
+
+export async function wontDo(task: Task): Promise<void> {
+  if (!prefs().enableV2) return;
   commitSnapshot(removeTask(snapshot(), task.id));
+  const entry = pushUndo({ kind: "reopen", label: "Won't Do", taskId: task.id, projectId: task.projectId, task });
+  void successToast("Won't Do", task.title, true);
   try {
-    await v2.batchTask({ update: [{ id: task.id, projectId: task.projectId, status: -1 }] });
-    undo.push({ kind: "reopen", label: "Won't Do", taskId: task.id, projectId: task.projectId, task });
-    publishUndo();
-    await showToast({ style: Toast.Style.Success, title: "Won't Do", message: task.title });
+    await writes.run(task.id, async () => (await v2ForWrite()).batchTask({ update: [{ id: task.id, projectId: task.projectId, status: -1 }] }));
   } catch (error) {
     commitSnapshot(upsertTask(snapshot(), task));
+    dropUndo(entry);
     await fail("Could not mark the task Won't Do", error);
   }
 }
 
 export async function togglePin(task: Task): Promise<void> {
-  const v2 = await v2Api();
-  if (!v2) return;
+  if (!prefs().enableV2) return;
   const pinned = !!task.pinnedTime && task.pinnedTime !== "-1";
   const pinnedTime = pinned ? null : new Date().toISOString().replace("Z", "+0000");
   commitSnapshot(patchTask(snapshot(), task.id, { pinnedTime }));
   try {
-    await v2.batchTask({ update: [{ id: task.id, projectId: task.projectId, pinnedTime }] });
+    await writes.run(task.id, async () => (await v2ForWrite()).batchTask({ update: [{ id: task.id, projectId: task.projectId, pinnedTime }] }));
   } catch (error) {
-    commitSnapshot(upsertTask(snapshot(), task));
+    commitSnapshot(patchTask(snapshot(), task.id, { pinnedTime: task.pinnedTime ?? null }));
     await fail(pinned ? "Could not unpin" : "Could not pin", error);
   }
 }

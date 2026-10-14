@@ -25,6 +25,11 @@ export class UndoStack {
     return this.entries.pop();
   }
 
+  /** Drops one entry, as when the write it would revert failed. */
+  remove(entry: UndoEntry): void {
+    this.entries = this.entries.filter((e) => e !== entry);
+  }
+
   peek(): UndoEntry | undefined {
     return this.entries[this.entries.length - 1];
   }

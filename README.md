@@ -87,7 +87,7 @@ An edit keeps its row in place, so the highlight stays on the task you changed. 
 | Quotes | `"plan the march" fri` | Quoted text stays in the title |
 | An escape | `\#1 fan` | A literal `#` |
 
-`⌘⇧D` in Add Task keeps the date words in the title for that one entry.
+A task with no date words is due today. `⌘⇧D` in Add Task keeps the date words in the title for that one entry.
 
 ## Preferences
 

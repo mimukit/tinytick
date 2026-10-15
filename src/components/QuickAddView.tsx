@@ -26,14 +26,13 @@ function trailingToken(text: string): { kind: "list" | "tag"; query: string; sta
 
 export interface QuickAddProps {
   defaultProjectId?: string;
-  defaultDue?: Date;
   /** Text from the command argument. It replaces the pre-fill preference. */
   initialText?: string;
   /** Pop back to the calling screen after a create, in place of closing the window. */
   popOnCreate?: boolean;
 }
 
-export function QuickAddView({ defaultProjectId, defaultDue, initialText, popOnCreate }: QuickAddProps) {
+export function QuickAddView({ defaultProjectId, initialText, popOnCreate }: QuickAddProps) {
   const { snapshot } = useLive();
   const { pop } = useNavigation();
   const [text, setText] = useState(initialText ?? "");
@@ -62,7 +61,8 @@ export function QuickAddView({ defaultProjectId, defaultDue, initialText, popOnC
       return;
     }
     setBusy(true);
-    const task = await create(draftToTask(draft, { projectId: targetId, defaultDue }));
+    // A task with no date words is due today, so it shows in the Today view.
+    const task = await create(draftToTask(draft, { projectId: targetId, defaultDue: new Date() }));
     setBusy(false);
     if (!task) return;
     setIgnoreDates(false);
@@ -90,7 +90,7 @@ export function QuickAddView({ defaultProjectId, defaultDue, initialText, popOnC
     tooltip: m.text,
   }));
   if (!list && !draft.listQuery) accessories.push({ text: targetName });
-  if (!draft.dueDate && defaultDue) accessories.push({ tag: { value: "Today", color: Color.Green }, tooltip: "Default date of this view" });
+  if (!draft.dueDate) accessories.push({ tag: { value: "Today", color: Color.Green }, tooltip: "Default date" });
 
   const createActions = (
     <>

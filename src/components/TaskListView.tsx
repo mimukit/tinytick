@@ -121,7 +121,6 @@ export function TaskListView({ fixedView, title }: TaskListViewProps) {
     refreshList: () => setRefreshCount((n) => n + 1),
     quickAddDefaults: {
       projectId: projectId ?? (view === "inbox" ? snapshot.inboxId : undefined),
-      dueToday: view === "today",
     },
     searchText,
     onAuthChange: (a) => setSignedIn(!!a.token),

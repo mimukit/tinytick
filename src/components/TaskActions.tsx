@@ -29,7 +29,7 @@ export interface ListControls {
   /** Re-sorts and re-groups the rows that edits hold in place. */
   refreshList: () => void;
   /** Defaults for Add Task opened from this view. */
-  quickAddDefaults?: { projectId?: string; dueToday?: boolean };
+  quickAddDefaults?: { projectId?: string };
   /** The search bar text, for the server search. */
   searchText?: string;
   /** Runs after the Account screen loads the sign-in state, so a sign-out shows the sign-in screen. */
@@ -143,7 +143,6 @@ export function QuickAddAction({ controls }: { controls?: ListControls }) {
         push(
           <QuickAddView
             defaultProjectId={controls?.quickAddDefaults?.projectId}
-            defaultDue={controls?.quickAddDefaults?.dueToday ? new Date() : undefined}
             popOnCreate
           />,
         )

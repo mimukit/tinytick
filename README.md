@@ -79,7 +79,7 @@ An edit keeps its row in place, so the highlight stays on the task you changed. 
 | A time | `3pm`, `at 15:30`, `tomorrow 9` | Due at that time. A bare hour picks the nearest future time. |
 | A range | `2pm-4pm`, `mon 10-11am` | Start and due time |
 | A repeat | `every day`, `every mon and thu`, `weekdays`, `every 2 weeks`, `monthly on 1`, `yearly` | Repeats |
-| A reminder | `remind 30m`, `remind 1d before` | Reminder before the due time |
+| A reminder | `remind 30m`, `remind 1d before` | Reminder before the due time. A task with a time and no reminder words reminds on time. |
 | A priority | `!high` `!med` `!low` `!none`, or `!3` `!2` `!1` `!0` | Priority |
 | A list | `~Work`, `~"Side projects"` | That list (fuzzy match) |
 | A tag | `#admin` | Tag, new ones allowed |

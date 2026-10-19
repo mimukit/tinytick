@@ -299,6 +299,12 @@ export function parseQuickAdd(input: string, options: ParseOptions = {}): QuickA
         ? `${formatDueLabel(startDate, isAllDay, now)} – ${formatDueLabel(dueDate!, isAllDay, now)}`
         : formatDueLabel(dueDate!, isAllDay, now);
       matches.push({ kind: startDate ? "range" : "date", text: result.text, label });
+
+      // A timed task with no `remind` words reminds at its time, as TickTick does.
+      if (!isAllDay && !reminders) {
+        reminders = ["TRIGGER:PT0S"];
+        matches.push({ kind: "reminder", text: "", label: "Remind on time" });
+      }
     } else if (repeat) {
       dueDate = startOfDay(repeat.first(today));
     }

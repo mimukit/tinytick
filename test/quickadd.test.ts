@@ -107,6 +107,17 @@ describe("reminders", () => {
     expect(d.reminders).toEqual([trigger]);
     expect(d.title).toBe("call bank");
   });
+
+  it("reminds on time for a timed task with no remind words", () => {
+    expect(parse("call bank tomorrow 3pm").reminders).toEqual(["TRIGGER:PT0S"]);
+    expect(parse("call bank 2pm-4pm").reminders).toEqual(["TRIGGER:PT0S"]);
+  });
+
+  it("sets no reminder for an all-day or undated task", () => {
+    expect(parse("call bank tomorrow").reminders).toBeUndefined();
+    expect(parse("call bank").reminders).toBeUndefined();
+    expect(parse("call bank tomorrow 3pm", true).reminders).toBeUndefined();
+  });
 });
 
 describe("priority", () => {

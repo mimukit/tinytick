@@ -1,5 +1,8 @@
 # tinytick
 
+> [!IMPORTANT]
+> This repository is archived. tinytick now lives in [mimukit/tinycast-plugins](https://github.com/mimukit/tinycast-plugins), in [plugins/tinytick](https://github.com/mimukit/tinycast-plugins/tree/main/plugins/tinytick). Open new issues and pull requests there.
+
 A TickTick extension for the [Tinycast](https://github.com/abue-ammar/tinycast) launcher on macOS. It talks to the TickTick web API directly, so the TickTick desktop app does not have to run in the background.
 
 - Add a task in one line: `call bank tomorrow 3pm !high #admin ~Personal`
